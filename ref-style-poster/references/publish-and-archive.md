@@ -57,3 +57,25 @@ shasum -a 256 本地图.png v.png
 
 - 飞书：目标栏位里有图、临时图已删、sha256 一致
 - 截图：带标题那张有出处（站点名 + 日期）、带论点那张高亮完整
+
+## 四、同步到 GitHub（用户自己的 skill 仓库）
+
+仓库：`git@github.com:MRF3247/-skills.git`（注意仓库名以连字符开头，写全路径；GitHub 已从 mrf3247 改名为 MRF3247）。该仓库平时放平铺的单文件 prompt，**本 skill 用目录形式上传**（因为带 assets 与 scripts）。
+
+```bash
+cd <临时目录>
+git clone --depth 1 git@github.com:MRF3247/-skills.git
+cp -R ~/.hermes/skills/ref-style-poster ./ref-style-poster
+rm -rf ./ref-style-poster/**/__pycache__
+git add -A ref-style-poster
+# 本机没配 git 身份时用 -c 临时指定，别改用户全局配置
+git -c user.name="MRF3247" -c user.email="maolpha@hotmail.com" commit -m "update: ref-style-poster v<版本>"
+git push origin main
+```
+
+坑：
+
+- 本机 **没有 gh CLI**，不要用 `gh repo ...`；SSH key 在 `~/.ssh/id_ed25519`，push 走 SSH 即可。
+- 全局 `git config user.name/email` 为空，commit 必须现场用 `-c` 传入，否则报身份未知。
+- 仓库约 20MB（PSD 7.5MB + 5 张参考图 11MB），单文件都远低于 100MB 限制，不要为了瘦身去转码参考图——那会连带改掉 SKILL.md 里的路径。
+- 验证：`curl -sS https://api.github.com/repos/MRF3247/-skills/contents/ref-style-poster` 能看到 SKILL.md 与 assets/references/scripts 三个目录。
