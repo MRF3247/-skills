@@ -1,7 +1,7 @@
 ---
-name: ref-style-poster
+name: scilink-ref-style-poster
 description: Use when 生成刀客轻研标准小红书封面（3:4）。
-version: 2.1.0
+version: 2.4.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -22,6 +22,41 @@ metadata:
 - 用户描述一个画面（「画个造假者得意、编辑追着打电话」）要出封面
 - 已有的刀客轻研封面要按同一套规范重做/改构图
 
+## 生图引擎（先定引擎，再写提示词）
+
+**默认引擎＝豆包 Seedream（通过 libtv CLI 调）**。用户 2026-10 明确：「你就用豆包那个引擎就行了，这个是默认的模型」。
+
+| 优先级 | 引擎 | 怎么调 | 用途 |
+|---|---|---|---|
+| **1（默认）** | 豆包 **Seedream 5.0 Pro** | `libtv`，`-s "model=Seedream 5.0 Pro"` | 中文海报／中文文案内嵌／新版封面首选 |
+| 2 | **Lib Image 2.5 Pro**（`lib-image-2.5-s`） | `libtv`，编辑指令模式 | 必须「保持 ref-set 画风不变、只改内容」时用它 |
+| 3（降级） | Hermes `image_generate`（MiniMax image-01） | 工具直调，纯文生图 | libtv 不可用/未登录时才用，**交付时必须说明「本次用 MiniMax，非豆包」** |
+
+**libtv 的坑（每条都踩过）**：
+
+- 二进制**不在 PATH 上**，在 `/Users/Jin/.libtv/libtv`（`which libtv` 会回 not found，别据此断定「引擎不可用」）。
+- `-s model=` **只认 modelName 且要带空格**：`Seedream 5.0 Pro`。传 modelKey（`doubao-seedream-5-0-pro`）或去掉空格（`Seedream5.0 Pro`）都报「未找到模型名字」。不确定先 `libtv model search seedream -t image`。
+- `quality` 取值因模型而异：`Seedream 5.0 Pro` 只收 `1K/2K`（不是 4K）；`ratio` 支持 `3:4`。
+- 三连准备：`libtv workspace use <folderId>` → `libtv project create "<名字>"` → `libtv project use <uuid>`，再 `libtv node create ... --run`。
+- 取图**用 `data.url[]` 里的 CDN 原图 curl 下来**，不要用 `libtv download`（会叠水印）。
+- 登录态检查：`libtv status`（看 `auth.loggedIn`）；掉了走 `libtv login`，不要在 skill 里存 token。
+
+**交付时必须报引擎**：哪张是豆包出的、哪张是降级引擎出的，写在同一句交付说明里（用户会追问「这是用 MiniMax 做的吗」）。
+
+## 文案是后处理叠的：改文案不重生图
+
+封面大字由 `add_cover_text.py` 叠上去，**不是模型生成的**。所以分两笔账：
+
+| 改什么 | 重跑什么 | 成本 |
+|---|---|---|
+| 只改封面文案 | `add_cover_text.py 无文案成品.png 输出.png "新文案"` | 秒级、零算力 |
+| 改构图/人物/元素 | 重跑豆包 Seedream | 一张一次算力 |
+| 色板 Δ 超标 | `hue_align.py` / `warm_grain.py` | 秒级、零算力 |
+
+流程所以固定为「先出无文案成品（art → 色板 → finalize）→ 文案最后叠」：文案往往要改 2–3 轮，先有无文案版就能反复叠字，不用重跑模型。
+
+**汇报用词**：只换文案时说「重压文案」或「重做带文案版」，不要说「封面图重出」——会被追问「文案变了为什么还要重生图？」（实测被问过）。
+
 ## 固定资产（内置于 skill，不要问用户要）
 
 | 文件 | 作用 | 能不能换 |
@@ -32,7 +67,7 @@ metadata:
 
 > `assets/ref-style.png` 是旧版（奶油黄 + 钢蓝）参考图，**已废弃**，仅供对比；现行标准只看 `assets/ref-set/`。
 
-脚本：`scripts/palette_check.py`（色板验收）、`scripts/finalize_cover.py`（叠封面出成品）、`scripts/hue_align.py`（仅蓝域校正）、`scripts/cover_compose.py`（调试用，打印图层与 mask）。
+脚本：`scripts/palette_check.py`（色板验收）、`scripts/finalize_cover.py`（叠封面出成品）、`scripts/warm_grain.py`（加暖黄微光＋颗粒噪点）、`scripts/add_cover_text.py`（在成品上叠封面大字，供「封面（带文案）」）、`scripts/shot_p2p3.py`（P2／P3 来源页截图）、`scripts/hue_align.py`（仅蓝域校正）、`scripts/cover_compose.py`（调试用，打印图层与 mask）。
 
 ## 用户唯一输入
 
@@ -67,6 +102,8 @@ metadata:
 1. **人物身份由主题决定**：画谁、什么职业、什么衣着、什么神态，全部跟着主题走（可以是医生、学生、审稿人、教授、编辑、商人……）。**不要预设身份**；用户没指定时按主题最合理的身份画，并在交付说明里写清用了什么身份。参考图里是医生不代表新图也是医生——身份变了就必须在提示词里点名写出来。
 2. **配色不得偏离 ref-set 的单色蓝系统**：米白／乳白 #FDFBF1 打底，中蓝 #246DB4、亮蓝 #3A88C7、天蓝 #90BDDC、浅中蓝 #6C9DCA、浅灰蓝 #BFD4E2 层层递进，深蓝 #1250A1 只做暗部与强调；整体是**同一色相的明度梯度**，几乎不用第二个色相（红色最多做小面积印章）。明度高、干净通透、有玻璃感和颗粒。
 3. **文字只渲染被要求的内容**：用户或画面脚本里明确要求的文字才出现（印章、标签、标题等），逐字照写；**没要求的一律不生成**——纸张/屏幕/胸牌上的「文字」用横线或色块占位，避免乱码和编造。
+3b. **必须是「扁平矢量编辑插画」，不是 3D 渲染**（用户 2026-10 退回的最严重一次）。判据：色块平涂＋硬边阴影块＋低对比渐变，**全图覆盖细密颗粒噪点（磨砂印刷肌理）**；人物是几何块面拼接、无真实材质反射、无光滑塑料高光、无景深虚化。看到圆柱光泽、皮肤反光、柔和体积光 = 跑偏，重生。提示词里必须显式写否：「二维扁平矢量插画，绝对不是 3D 渲染：不要 Blender/C4D 建模感、不要立体圆柱感、不要真实材质反射、不要光滑塑料高光、不要景深虚化、不要照片级光影」。
+3c. **亮部要有淡暖黄光**：纯冷蓝会显得单调，也是用户反复提的点。提示词写「亮部带一点点暖黄／米白光（很淡的暖色反光）」；模型不出时用 `scripts/warm_grain.py` 后处理加（只叠亮部，暗部不动，避免发脏），跑完色板通常反而更近参考图（实测最差 Δ 30.3 → 19.0）。
 4. **安全区**：顶部 0–250px 会被白渐变淡化、800–1440px 会被蓝渐变盖住。主角的脸和核心道具必须落在 **y≈300–800** 区间。
 
 ## 流程
@@ -90,26 +127,28 @@ curl -sSL <文章URL> | head -200      # 或 web_extract
 
 ### 2. 生成（只换引擎，不换画风）
 
-#### 档 A（首选，引擎支持编辑指令）
-
-libtv 实测通路；其 nano-banana / qwen-edit / gpt-image edit 同理换命令即可。
+#### 档 A（默认，豆包 Seedream 5.0 Pro）
 
 ```bash
-libtv workspace use <文件夹id> && libtv project create "<主题>-封面" && libtv project use <uuid>
-libtv upload "参考图1" -t image --resource <skill目录>/assets/ref-set/ref5-doctor-chart.png
-libtv upload "参考图2" -t image --resource <skill目录>/assets/ref-set/ref2-gut-antibody.png
-libtv upload "参考图3" -t image --resource <skill目录>/assets/ref-set/ref1-weightloss.png
-libtv upload "人物照" -t image --resource ./face.png      # 仅当需像某个真人
-libtv node create "封面" -t image --left 参考图 --left 人物照 \
-  -s "model=Lib Image 2.5 Pro" -s modeType=image2image -s ratio=3:4 \
-  -s resolution=4K -s quality=max -s count=1 --prompt "<提示词>" --run
+LIBTV=/Users/Jin/.libtv/libtv   # 不在 PATH 上，写绝对路径
+$LIBTV workspace use 4612922    # 小红书海报-主画布
+$LIBTV project create "<主题>-封面" && $LIBTV project use <uuid>
+$LIBTV node create "封面" -t image \
+  -s "model=Seedream 5.0 Pro" -s ratio=3:4 -s quality=2K -s count=1 \
+  --prompt "<提示词>" --run
+# 成功回 data.url[] → curl 原图（不要 libtv download，会叠水印）
 ```
 
-- `--run` 是同步等待，不要外面再包轮询。
-- 取图用 `data.url[]` 的 CDN 原 URL 直 curl（`libtv download` 会叠水印）。
-- `算力不足 [1200000136]` = 账号没算力，换账号，降规格无用。
+要「保持 ref-set 画风、只改内容」时换 Lib Image 2.5 Pro 的编辑指令模式：
 
-#### 档 B（只能图生图，如 Agent 自带生图 / seedream / MJ）
+```bash
+$LIBTV upload "参考图" -t image --resource <skill目录>/assets/ref-set/ref5-doctor-chart.png
+$LIBTV node create "封面" -t image --left 参考图 \
+  -s "model=Lib Image 2.5 Pro" -s modeType=image2image -s ratio=3:4 \
+  -s quality=max -s count=1 --prompt "<模板 A>" --run
+```
+
+#### 档 B（降级，Hermes image_generate / MiniMax image-01）
 
 仍用固定的 `assets/ref-set/` 做参考图入边（挑 2–3 张：有人物的 ref5、有元素/质感的 ref1、ref2），提示词用下面的模板 B。色值会漂，第 3 步必验。
 
@@ -147,9 +186,16 @@ python <skill>/scripts/palette_check.py <skill>/assets/ref-set/palette-sheet.png
 
 主色（占比前 4）**ΔRGB ≤ 25** 算对上；`25–30` 可交付，但要在交付说明里把偏差写出来（用户接受过一次 26.3）；`> 40` 必须重生或跑 `scripts/hue_align.py` 只调蓝色域。
 
+**验收对象优先是 finalize 之后的成品，不是原始出图**：PSD 的顶部白渐变＋底部蓝渐变会改掉主色占比，实测同一张图原始出图 Δ 26.0、套完模板后降到 18.0（本来一张要「修」的图直接合格）。顺序固定为 `art → finalize → palette_check(成品) → 不过才调色`，反了会白调一次色。
+
+**`hue_align.py` 也会把本来合格的图拉差**（实测 26.0 → 38.0，因为整张图的蓝色域被一起平移）。所以：跑完必须复测，**Δ 变大立刻丢弃校正版、回退未校正图**，不要把「跑过校正脚本」当成交付条件。同理 `warm_grain.py` 跑完也要复测。
+
 ### 4. 叠封面（必跑，这一步才成成品）
 
 ```bash
+# 可选但有神：先补暖黄微光＋颗粒噪点（模型不出暖光时用）
+python <skill>/scripts/warm_grain.py 生成的图.png 生成的图_wg.png [--glow 0.20] [--grain 2.2]
+
 python <skill>/scripts/finalize_cover.py --art 生成的图.png \
   --psd <skill>/assets/cover-template.psd --out 封面成品.png
 ```
@@ -162,9 +208,123 @@ python <skill>/scripts/finalize_cover.py --art 生成的图.png \
 
 **固定交两份**：叠好封面的 1080×1440 成品 + 未叠封面的 4K 原图（用户常拿原图自己再排版）。传进飞书后要下载回来算 sha256 与本地文件比对，确认没传错、没被转码。
 
+## 机制/结构要准确的图：先双参考图生图，PIL 只是兜底
+
+用户会拿一张真实机制示意图来对账（例：Tarlatamab 双特异性抗体桥接 T 细胞与肿瘤细胞）。这类图的评判标准是**形态正确**（两个结合臂不同、分别直接贴住两个细胞的表面受体）。
+
+**顺序不能反**：① 先按下一节「双参考图生图」把用户的参考图 + 上一版成品一起喂给 Lib Image 2.5 Pro，做定点修改；② 只有模型连续两轮仍画不对结构、或用户对画面不满意时，才上 PIL 手画。
+
+> 纯 PIL 硬画容易被判「丑」——实测两笔都踩过：三个元素占太大地方、为了准把肺器官与气泡装饰全删了。真要上 PIL，**背景/装饰照旧保留，只把主体换掉并缩小到约 40% 宽**。
+
+PIL 兜底路线的要点：
+
+1. `S=3` 超采样＋`LANCZOS` 缩回（否则圆形边缘锯齿）；最后叠极轻高斯噪点（σ≈3）做出磨砂印刷感。
+2. **“咬住”关系用叠层次序画**：先画抗体色块 → 在接触位置画米白色凹槽圆 → **再把细胞突起/球头重画到凹槽上**（不重画会被凹槽盖掉，视觉上就变成一根空管，看图的人只能判“没接触”）。
+3. 两个结合臂必须**颜色和宽度都不同**（亮蓝窄上臂、深蓝宽下臂），否则无法表达「双特异性」。
+4. 验收不能只靠 vision 模型的一句话判定：它会对着小图说「没接触」。用像素断言——沿中轴取一条竖列，看到突起色（如 #6C9DCA）与抗体色（#3A88C7）**相邻**、且凹槽里有球头色像素，才算接上。
+5. `finalize_cover` 后再跑 `palette_check`：程序化平涂图常常 Δ 落在 25–27（因为色块占比集中），略超 25 可交付，在汇报里写明数值。
+
+## 用户给了参考图时：双参考图生图，不要纯文生图
+
+用户发一张机制/实物示意图并说「按这个重画」时，**默认应当是图生图，把参考图真的喂给模型**。纯文生图（text2image）出来的东西看似对、形态错，会被追问「你是不是没把我的图给模型读」。
+
+正确姿势（Lib Image 2.5 Pro）：
+
+```bash
+$LIBTV upload "肺底图" -t image --resource <上一版成品.png>
+$LIBTV upload "机制参考" -t image --resource <用户给的参考图.png>
+$LIBTV node create "封面" -t image -s "model=Lib Image 2.5 Pro" -s modeType=image2image \
+  -s ratio=3:4 -s quality=max --left-add 肺底图 --left-add 机制参考 --prompt "<保留 A + 替换 B>" --run
+```
+
+- **两张参考各司其职**：参考 1 = 构图与画风底子（肺轮廓、气泡、颗粒、底部留白），参考 2 = 要准确重画的结构（细胞形态、连接关系）。提示词写成「保留第一张的 X/Y/Z，只把内部内容换成第二张的 A/B/C」。
+- **不要删环境元素**：用户否过一次「把肺和装饰全删了只剩三个大色块」——**只换主体、不拆背景**；主体还要**缩小**（占画面宽度 ~40%），别铺满。
+- **结构不够准就做第二轮定点编辑**，不要重抽整图：把上一轮成品再当参考 1，指令写成「其余全部不变，只改中间这个连接结构为…」。实测一轮就修好（扁平淡蓝、肺与气泡保留、抗体两臂不同且两端贴住）。
+- 多张参考时只能用 `--left-add` 重复传，**`--left` 与 `--left-add` 不能同时用**（会报错）。
+
+## 专业医学元素：先找学术级参考图，再生图
+
+画细胞、受体、分子、信号通路这类**有客观形态**的东西时，**禁止凭空画**。用户 2026-10 明确要求：先生网上找到学术级（期刊图 / PMC / 教科书）参考图，再图生图。Tarlatamab 那次就是反面教材——按文字描述硬生，抗体两臂形状和连接关系全错。
+
+流程：
+
+1. **搜图**：`web_search "<分子名> structure schematic figure review PMC"`，优先 PMC / Frontiers / Nature Reviews / 学会官方图，避开科普公众号和商业试剂公司插图（常画错）。
+2. **拿图**：PMC 页的图可直接 curl `https://cdn.ncbi.nlm.nih.gov/pmc/blobs/...`；Frontiers 去 `/articles/<doi>/full` 页找 figure 原图。下完 `vision_analyze` 看一眼确认“画的就是这个分子/通路”。
+3. **双参考图生图**：参考 1 = 品牌底图，用**未叠模板的原始出图（raw art）**而非已叠 PSD 的成品（成品会带底部蓝渐变，模型学进去叠两次）；参考 2 = 学术参考图（保证形态）。提示词写「保留第一张的画风与构图，把主体换成第二张里的 <元素>，结构、连接关系按第二张来」。
+4. 交付时在文档里写明参考图出处（期刊 + DOI），**并按用户 2026-10 要求做两件事**：
+   - 把参考图以**引用块 + 小图**的形式贴进文档（用户 2026-10 口径：「应该作为引用块放进去，小一点，不要喧宾夺主」）——不要独占一张大图。写法：
+     ```xml
+     <blockquote>
+       <p>参考图（生图依据）：MET 受体结构域示意，Front. Cell Dev. Biol. 2020;8:490 图1，DOI 10.3389/fcell.2020.00490</p>
+       <img path="@./met_ref.png" width="420" height="168"/>
+     </blockquote>
+     ```
+     插入位置：四图 grid 之后；`width/height` 按原图长宽比缩到 ~420px 宽。
+   - 在「封面（带文案）」那张图块上加一条评论，写清参考了什么、怎么用的、DOI：
+     ```bash
+     lark-cli drive +add-comment --doc <docx token> --type docx \
+       --block-id <img 块ID> --content @comment.json --as user
+     ```
+     `comment.json` 的 elements **只接受 `text` / `mention_user` / `link` 三种 type**（不是 `text_run`），例：`[{"type":"text","text":"…"},{"type":"link","link":"https://doi.org/…"}]`。图片块 ID 从 `docs +fetch --detail with-ids` 的 `<img id="doxcn…">` 里取。
+
 ## 发布与归档（偶尔需要）
 
 成品要放进飞书文档的分栏、或要给稿件做新闻原文截图＋马克笔高亮存证时，看 `references/publish-and-archive.md`（含完整命令与坑）。
+
+## 五、P2／P3 来源页截图（物料库标准）
+
+每条资讯稿要四张图：`封面（无文案）`＋`封面（带文案）`＋`P2`＋`P3`。封面走上文流程，P2／P3 走这一节。
+
+| 图 | 内容 | 口径 |
+|---|---|---|
+| **P2** | 来源页顶部：栏目＋标题＋日期＋作者＋导语开头；该页命门数据段若已在屏内，就把那一段**整段刷黄** | 1080×1440（3:4），无 cookie 横幅、无 Sponsor Message／广告位、无大片空白 |
+| **P3** | 同一页的**关键结果段**（样本量／终点／效应量／CI／发生率／死亡数） | 同上，高亮**整句或整段** |
+
+> **高亮口径（用户 2026-10 定，别改回只标数字）**：用户原话「怎么只有几个单词被标注了重点？要整句或者整段」。`--mark-mode sentence`＝含关键数字的整句刷黄，`--mark-mode para`＝整段刷黄（默认 P3 用 para）。
+>
+> **去重（同一条硬规则）**：P3 要截的段落如果已经出现在 P2 的取景内，**只保留 P2，不出 P3**（用户原话：「p2 和 p3 的内容重复时，只需要保留 p2」）。脚本会自动算 `p3_dup_of_p2`，命中就不生成 P3；这时文档分栏改 3 栏 `width-ratio="0.333333"`，多维表格的 P3 列留空并在文档里注明原因。
+
+一条命令出两张：
+
+```bash
+python3 <skill>/scripts/shot_p2p3.py \
+  --url "<文章URL>" --slug measles-us --anchor "1,338 cases" \
+  [--mark-mode para|sentence|none] [--only p2|p3|both] [--mark-in p2|p3|both] \
+  [--masthead "PubMed · British Journal of Anaesthesia · 2026-10-24 · PMID 42926172 · DOI 10.xxxx/xxxxx"]
+# 输出 /tmp/shots/<slug>-p2.png（1080×1440）、-p3.png（1080×1440）
+# stdout JSON: http / mark / y_para / p3_dup_of_p2 / crop_x
+# 只要一张（P3 会重复时）：--only p2 --mark-in p2 --mark-mode para
+```
+
+- **`--masthead` 是给「页面自己不显示题录」的站准备的**（PubMed 文献页实测：只渲染 Abstract，标题/期刊/日期全在不同区块且常不渲染）。它会在截图顶部插一条灰字题录行，把站点·期刊·日期·PMID·DOI 补齐，并在文档里注明「该页未渲染标题，题录见顶部行」。
+- 不要把页面自己的栏目标题（`Skip to content`、搜索框、PubMed 顶栏）留在图里：HIDE 里已按 `[class*=usa-banner] / [class*=rss] / [class*=error] / [class*=search-form] / [class*=top-bar]` 屏蔽，但**别加 `[class*=in-page]`**——它会把文章正文一起删掉。
+
+- **NEJM 官网打不开就换 PubMed 文献页**：nejm.org 与 doi.org 跳转在 camofox 里常直接 500，重启浏览器也未必救得回来。做法：① 用 `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:%22<DOI>%22&format=json&resultType=core` 把 DOI 换成 PMID；② 截 `https://pubmed.ncbi.nlm.nih.gov/<PMID>/`，配 `--masthead "PubMed · N Engl J Med · <日期> online · PMID … · DOI …"` 补题录（PubMed 页只有 Abstract，不渲染期刊/日期）；③ 想要「P2 干净 + P3 带黄条」时：先跑一次 `--mark-mode para`（两张都带条），拿它的 `-p3.png`；再单独跑 `--mark-mode none --only p2` 拿干净 P2。因为 `--mark-in p3` 常会判成 `p3_dup_of_p2` 直接不出 P3。
+- **PubMed 的标题/作者/PMID 在 `<header>` 里，而 HIDE 默认把 `header` 删掉**（2026-10 实测：截出来的 P2 只剩 Abstract，没有标题）。拍 PubMed 页必须加新参数 **`--keep-header`**（已加到脚本），HIDE 会保留 header/nav/footer。
+- `--anchor` 要拿正文里**唯一**的短串（例：`0.55` 比 `7.6` 稳，后者常被截断成日期或页码）；找不到 anchor 会回 `mark: no-anchor`，此时不会出 P3。
+- **P3 与 P2 重复时（`p3_dup_of_p2: true`）**：交付三图（两封面 + P2）三栏，或者从脚本额外保存的全页图 `<slug>-full.png` 里自己裁一张以黄条为中心的 3:4 特写当 P3（1200→1080 缩放，字不糊）。
+- **副标题过长**：`add_cover_text.py` 的副标题会自动缩字号直到整行 ≤990px（用户给的长副标如「中国牵头，29国230家医院参与，PFS 7.6 vs 5.4个月」也能一行放下）。
+- **`--anchor` 千万别拿「行首那半句」**（会被前一段抢到）；`--mark-in p3` 只给 P3 打黄条，P2 保持干净。
+- 要先有 camofox：`curl -s http://127.0.0.1:9377/health`（不在就跑 `~/.local/bin/camofox-browser`）。443/Cloudflare 站的备选路线见 `references/publish-and-archive.md` 第二节。
+- **出版社/学会站经常 403 或 camofox navigate 500**（gastrojournal、gastro.org 实测都有）：先 `curl -sL -o /dev/null -w '%{http_code}'` 看能不能直接拿到 200；能拿到就走离线渲染——
+  ```bash
+  python3 <skill>/scripts/shot_offline.py --url "<页面>" --slug pbc \
+    --anchor "linerixibat" --mark-mode para \
+    --masthead "gastro.org · American Gastroenterological Association · October 22, 2026"
+  # 出 /tmp/shots/<slug>-offline-p2.png；若黄条不在 P2 窗口内会再出 -p3.png
+  ```
+  它做四件事：curl 取 HTML → 删外链 CSS/JS/图片（否则 headless 等网络会挂）→ Python 侧打点（整段给 `<ul>` 刷黄底、整句给含数字的句子包 `mark`）→ 本地 Chrome headless 全页截图再按正文栏宽裁 3:4。页码兵器的三个坑都在里面了：脚本必须放 `</body>` 前（放 head 里执行时 body 还没解析）、打点要在“删外链”之后（反了会把注入的脚本一起删）、同一个 anchor 取“正文最长的那块”（否则会命中被隐藏的导航条目，等于白打）。
+- **camofox 跑一次成功、紧接着第二次 navigate 就 500**（实测常态）：每轮重跑前 `pkill -f camofox-browser` 再启，不要在一个进程里连着跑多条。
+- 出完图必须 `vision_analyze` 自检三件事：**标题日期可读／无 cookie 与 Sponsor 残留／黄条落在数字上**。任何一条不达标就重跑，不要手工糊图。
+- 上传到多维表格走 `+record-upload-attachment`，文件名带选题关键词：`{内容标题}-p2.png` / `-p3.png`；封面对应 `-封面.png` / `-封面带文案.png`（不要留 `cover_plain.png` 这种英文临时名，用户会看到）。
+
+### P2／P3 三个必踩的坑（都是实测）
+
+1. **黄条不能直接改 `innerHTML`**：正则会把 `href="…"`、`data-*` 里的数字一起 replace，页面被撕出 `12" target="_blank">` 这种裸代码。正确做法是 `TreeWalker` 遍历文本节点，逐个文本节点包 `<mark>`（整句模式）。
+1b. **整段高亮不能用 `<mark>` 包 `<p>`**：mark 是行内元素，包块级段落会渲染成段左两条黄竖线（像标签不像高亮）。整段模式改成包一层 `span` 刷 `background` 再塞回 `p`。
+2. **Sponsor Message／空广告位要按文本特征删**：它们常在高 300px+ 的空容器里，按 class 名（`[class*=sponsor]`）抓不全；扫 `div,section,aside,figure` 的 textContent 里含 `sponsor message|advertisement` 的块，删掉最近容器。
+3. **懒加载大图常常加载不出来**：`img.complete && naturalWidth===0` 的图别留着——它的位置会变成一大块白，连图注一起隐藏（`i.closest('figure,div')`）。
+4. **3:4 别整宽裁**：新闻站正文栏只占视口一半，整宽裁会留 1/3 白边并让字变小。先量所有 `p` 的 `left/right` 得到正文栏宽度，按这个宽度裁 3:4，再放大到 1080×1440。
 
 ## 后处理红线
 
@@ -174,7 +334,9 @@ python <skill>/scripts/finalize_cover.py --art 生成的图.png \
 | 把成图颜色映射到参考色板 | 红印章被并进深蓝，肤色变红斑 |
 | 调色后不告知 | 用户拿到的是修过的，不是生成的 |
 
-唯一可用：`scripts/hue_align.py`，只动单一色相域。
+| 跑 hua_align / warm_grain 后不复测 | 可能把 LL 26 拉到 38，交付的是变差的图 |
+
+唯一可用：`scripts/hue_align.py`，只动单一色相域（跑完必复测，Δ 变差就回退）。
 
 ## 引擎无关的硬事实（踩过）
 
@@ -183,8 +345,55 @@ python <skill>/scripts/finalize_cover.py --art 生成的图.png \
 - **脸太具体**：默认模型会把眼睛鼻子嘴巴全画出来。提示词写死「不画鼻子、不画嘴，眼睛只用眼镜暗示」，皮肤指定极浅蓝白而非肉色；细节见「人物规则」。
 - **元素数量不可控**：要求「正好 N 个」时模型不会数（实测：要 10 张纸→出 8 张；下指令补足→变 12 张；再下指令减两张→才到 10）。做法：按实测差值下「加/减 M 个」的具体指令，连做 1–2 轮；**每轮编辑后都重新数、重跑色板验收**，因为每次编辑会让色值再漂一档。
 - 配色漂成「亮蓝一片」：只对蓝色域跑 `hue_align.py`（色相 175–255）拉回来，不要动全局。
+- **MiniMax image-01（Hermes 默认 image_gen，降级引擎）是纯文生图，不能图生图**：`assets/ref-set/` 的参考图进不了它的输入，风格只能纯靠提示词锁。它默认偏 3D 光泽渲染，**必须写一长串否词**（见固定规则 3b）并把「扁平矢量＋细密颗粒噪点＋亮部淡暖黄光」写成正面要求；出图后先用 `vision_analyze` 问一句「这是 3D 渲染还是扁平矢量插画、有没有颗粒噪点」，答 3D 就重跑，别靠调色救。
+- **别把「which libtv 找不到」当成引擎不可用**：它在 `/Users/Jin/.libtv/libtv`，不在 PATH 上。2026-10 就因为漏了这点直接用降级引擎（MiniMax）出了整批封面，被用户追问「我没说要用 MiniMax」。
+- **camofox 连续 500 / `page.goto Timeout 30000ms`**：不是网址问题，是浏览器会话残留（navigate 失败 3 次会销毁 session）。`pkill -f camofox-browser` → 重新 `~/.local/bin/camofox-browser`（background=true）→ 等 `curl :9377/health` 回 `browserConnected:true` 再重试，一次就通。
 - 英文印章/标签（REJECTED、RETRACTED 等）现代模型基本拼对；中文方块字作印章易乱码，中文需求优先做成“无字图案”或大字标题单独排版。
 - 用户没点名的文字：模型会自己编小字（论文标题、胸牌、招牌）。提示词必须写「纸张内容用横线占位，不要自行编造文字」。
+
+## 两条硬规则（2026-10 用户当场追问出来的）
+
+0. **专题封面的主标＝专题名，不是顶部胶囊**（用户原话：「ESMO2026专题的字样为什么是一个小小的胶囊？这个应该是主标」）。成组专题一律用 `add_cover_text.py 成品.png 输出.png "ESMO 2026专题" --subtitle "<这篇的研究主题>"`——主标大字放底部文案区，副标小字在下；`--badge` 胶囊只在普通单条需要栏目标识时才用，**不得拿它当主标**。
+
+1. **不得跳过 finalize_cover**。完整管线固定为 `art → warm_grain → finalize_cover(PSD) → palette_check → add_cover_text`。直接对原始出图跑 add_cover_text 的后果：没 logo、没顶部白渐变、没底部蓝渐变、字号与安全区全不对——用户一眼就能看出“排版不一样了”（已实际发生）。验收时先看成品是否带 logo 与底部渐变，没有就是跳过了模板。
+2. **用了外部参考图，必须把参考图插进文档**（引用块小图 ~420px）+ 文字写明出处（期刊/PDB ID + 链接）；只写 DOI 不放图不算。
+3. **画风参考图要用未叠模板的原始出图（raw art），不要用已叠 PSD 的成品**：成品的底部蓝渐变会被图生图模型学进新图，再叠一次模板＝蓝底双倍、显得又宽又暗。只有成品可用时，提示词里显式写「不要参考图底部的蓝渐变／深蓝块」，出图后检查原图底部像素是浅色（RGB 都 >200）才合格。
+
+## 机制图：三种可复用场景（**仅兼底，不得当主路线**）
+
+> **用户 2026-10 当场追问「你的封面怎么会变成这样，不是应该用豆包的模型去做吗」。教训：豆包图生图是唯一主路线，PIL 程序化只能当兼底，且必须在问过用户、得到同意后才能用，绝不能自己决定后批量铺到多篇。**
+> 程序化版与豆包版的视觉差别（用户一眼能看出）：程序化＝硬边色块、无磨砂频粒、底部一整块硬蓝；豆包版＝磨砂频粒、器官半透明轮廓、底部渐变蓝。同一批选题必须同一种风格。
+
+**用户定下的三条生图纪律（优先级高于任何 vision 建议）**：
+1. **一张一图，不抽卡**：`count=1`，生完**直接写进文档**给用户看；能不能用的判断权在用户，不在 vision。
+2. **vision 只做技术自检**（文字出界、乱码、压图、明显结构错），**不得以 vision 意见为由不出图或改道程序化绘制**。
+3. **器官不是必备项**：先读文档定元素（靶点/药物/细胞/器官/终点对比），按元素写提示词；没元素需要器官就不画器官。
+
+脚本 `scripts/draw_scenes.py`（1200×1600，品牌四阶蓝，扁平矢量，无噪点）。用 `scene` × `organ` 组合：
+
+```bash
+python3 scripts/draw_scenes.py '{"scene":"adc","organ":"stomach","out":"clarity_art.png"}'
+```
+
+- `pocket`：球形靶蛋白 + 边缘六边形口袋 + 深蓝小分子（小分子抑制剂主题）
+- `adc`：脂双层膜（双带＋磷脂点）+ 4 个跨膜受体 + 倒 Y 抗体（Fab 臂朝下夹受体球头、Fc 朝上）+ Fc 顶端挂 3 颗深色载荷圆点
+- `checkpoint`：上 T 细胞（PD-1）+ 下肿瘤细胞（PD-L1）+ 右侧 Fc 胶囊与两条臂顶开两者
+- `organ`：`lung` / `bladder` / `stomach` / `uterus` / `bone` / `generic`
+
+**硬规则（调试出来的）**
+1. **底部必须有深蓝块**（y≥980 全宽）承白色文案；否则 `add_cover_text.py` 的白字压在米白底上对比度不足。
+2. **不要在球体内部画同心圆/受光圆**——两个深圆点 + 对称＝“机器人脸”；口袋开在球体**边缘**（半在外），里面嵌深色六边形。
+3. 抗体必须 **Fab 臂贴受体、载荷挂 Fc 尾**；画反了专业读者一眼看出。
+4. 出图先过 `vision_analyze` 问“像不像脸 / 能不能一眼看懂”，再进封面。
+
+## P3 裁剪的坑（retina / 长页面）
+
+`shot_p2p3.py` 存的 `<slug>-full.png` 在 retina 下宽度可能是 1942、9502 等奇怪值。裁 P3：
+
+- 黄块坐标按**逐行**统计（`(a[:,:,0]>235)&(a[:,:,1]>215)&(a[:,:,2]<160)`，单行 >10 计），取这些行的 `y0,y1`；**不要用 `np.where` 的全局 min/max**（页面上的黄色广告会把范围拉到几千像素）。
+- 窗口 `h_win=min(H, int(W*0.93*4/3))`、`w_win=int(h_win*3/4)`，`top=clamp(y0-100, 0, H-h_win)`。
+- 裁完自检：P3 黄占比 >3%、P2 为 0；低于 1% 就是裁错。
+- **Lancet 类摘要数字用间隔号**（`38·2`、`19·0`），用小数点写 `--anchor` 会回 `no-anchor`。
 
 ## QA 清单
 
@@ -197,3 +406,9 @@ python <skill>/scripts/finalize_cover.py --art 生成的图.png \
 - [ ] 只出现被要求的文字，逐字正确无乱码；多余位置无文字
 - [ ] 主角脸部在 y≈300–800 安全区
 - [ ] 已叠 PSD（顶部有 logo、底部有蓝渐变）
+- [ ] **汇报时点名 skill**：说「写进 skill」时必须写清是 `scilink-ref-style-poster`（封面、生图、P2-P3、色板）还是 `scilink-xhs-writing`（正文字句、标题、排版）——用户明确要求。混在一起说会被打回。
+- [ ] **画风是扁平矢量插画（不是 3D）**；有细密颗粒噪点；亮部有淡淡暖黄光
+- [ ] 要「封面（带文案）」时用 `scripts/add_cover_text.py 成品.png 输出.png "主标题" [--subtitle "副标题"] [--badge "ESMO2026专题"]`。两种专题写法：**① 主/副标题两级（用户 2026-10 选的口径）**——主标题＝专题名（「ESMO 2026专题」）放大字、副标题＝这一篇的研究主题（「小细胞肺癌维持治疗3期研究」）用 `--subtitle`，字号默认 0.42×；**② 顶部胶囊 `--badge`**（logo 在 y 26–89，胶囊从 y=112 起），不占 y≈950 文案位。普通单条不加专题层
+- [ ] **上传附件前把成品复制到当前工作目录或 `/tmp`**：`+record-upload-attachment --file` 只认 cwd／`/tmp`／`~/files`，给 `~/Documents/Obsidian Vault/...` 会报 `unsafe file path`；附件字段是**追加**语义，重复上传会出现两条同名记录，用 `+record-remove-attachment --file-token <token> --yes` 清掉；**上传时不要加 `--yes`**——它只用于 remove 这类动作，加在 upload 上会静默跳过（回 ok 但字段仍为空，读回才发现）
+- [ ] **生图前确认文字三列已定稿**（`封面建议文案`／`图文建议标题`／正文）：文案是后处理叠的，改文案只重跑 `add_cover_text.py`（秒级零算力），改构图才烧一次模型；标准节奏＝文字全部定稿 → 用户点名哪几条 → 再出图
+- [ ] 资讯稿的 P2／P3 走 `scripts/shot_p2p3.py`：两张都 1080×1440、无广告残留、高亮是**整句或整段**；P3 与 P2 重复时只交 P2

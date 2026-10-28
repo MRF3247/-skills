@@ -65,11 +65,11 @@ shasum -a 256 本地图.png v.png
 ```bash
 cd <临时目录>
 git clone --depth 1 git@github.com:MRF3247/-skills.git
-cp -R ~/.hermes/skills/ref-style-poster ./ref-style-poster
-rm -rf ./ref-style-poster/**/__pycache__
-git add -A ref-style-poster
+cp -R ~/.hermes/skills/scilink-ref-style-poster ./scilink-ref-style-poster
+rm -rf ./scilink-ref-style-poster/**/__pycache__
+git add -A scilink-ref-style-poster
 # 本机没配 git 身份时用 -c 临时指定，别改用户全局配置
-git -c user.name="MRF3247" -c user.email="maolpha@hotmail.com" commit -m "update: ref-style-poster v<版本>"
+git -c user.name="MRF3247" -c user.email="maolpha@hotmail.com" commit -m "update: scilink-ref-style-poster v<版本>"
 git push origin main
 ```
 
@@ -78,4 +78,4 @@ git push origin main
 - 本机 **没有 gh CLI**，不要用 `gh repo ...`；SSH key 在 `~/.ssh/id_ed25519`，push 走 SSH 即可。
 - 全局 `git config user.name/email` 为空，commit 必须现场用 `-c` 传入，否则报身份未知。
 - 仓库约 20MB（PSD 7.5MB + 5 张参考图 11MB），单文件都远低于 100MB 限制，不要为了瘦身去转码参考图——那会连带改掉 SKILL.md 里的路径。
-- 验证：`curl -sS https://api.github.com/repos/MRF3247/-skills/contents/ref-style-poster` 能看到 SKILL.md 与 assets/references/scripts 三个目录。
+- 验证：`curl -sS https://api.github.com/repos/MRF3247/-skills/contents/scilink-ref-style-poster` 能看到 SKILL.md 与 assets/references/scripts 三个目录。

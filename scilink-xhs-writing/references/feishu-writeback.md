@@ -12,18 +12,29 @@ terminal(command="lark-cli docs +fetch --doc \"<URL>\" --as user --doc-format ma
 
 ## 2 · 读批注（关键一步）
 
-同一个 fetch 会带 `reference_map.comments`，里面每条：
+**别指望 `docs +fetch` 带批注**——实测 fetch 只回 `{document}`，`reference_map.comments` 已经没有了。拿批注只能走 drive：
 
-```xml
-<comment comment-id="..." start-block-id="..." end-block-id="...">
-  <quote>被批注的原文</quote>
-  <msg user="...">批注意见</msg>
-</comment>
+```
+lark-cli drive +list-comments --url "<文档或 wiki URL>" --solved-status all --as user
 ```
 
-逐条抄成「原文 → 意见」两列，**按文本顺序**排，再动手改。同一条 quote 可能挂多条 msg（一个位置两轮意见）。
+每条给 `comment_id / quote / is_solved / reply_list.replies[].content.elements[0].text_run.text`。用 Python 逐条打印下面四行再动手：
 
-批注上限会被截断，返回的 `comments.tips` 有提示时改用 `lark-cli drive +list-comments` 取全量。
+```python
+for c in d['data']['items']:
+    msgs = [r['content']['elements'][0]['text_run']['text'] for r in c['reply_list']['replies']]
+    print(c['comment_id'], '|', repr(c['quote'])[:120], '|', msgs)
+```
+
+按文本顺序排成「原文 → 意见」两列表，再动手改。同一条 quote 可能挂多条 msg（一个位置两轮意见）。
+
+改完要**逐条 `+resolve-comment`**（`--comment-id`，可传 URL）：
+
+```
+lark-cli drive +resolve-comment --url "<URL>" --comment-id <id> --as user
+```
+
+不 resolve 的话，`overwrite`／`block_replace` 之后批注会挂到已删 block 上，文档右侧会长期挂着一堆对不上位置的批注。
 
 ## 3 · 拿 block id
 

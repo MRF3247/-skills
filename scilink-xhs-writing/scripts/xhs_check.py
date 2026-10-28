@@ -5,7 +5,7 @@
 用法：
     python3 xhs_check.py draft.md                     # 只查字数和黑名单
     python3 xhs_check.py draft.md --title "标题文本"   # 加查标题 ≤20 字
-    python3 xhs_check.py draft.md --tags-any          # 不强制 5 个 tag
+    python3 xhs_check.py draft.md --tags-any          # 不强制 6 个 tag
     python3 xhs_check.py draft.md --json              # 机器可读
 
 约定：草稿最后一行以 # 开头的行视为 tag 行，其余为正文。
@@ -16,8 +16,8 @@ import sys, json, re, argparse
 MAX_TOTAL = 1000      # 小红书正文上限（含标点、含 tag、不含换行）
 WARN_TOTAL = 900      # 接近上限提醒
 MAX_TITLE = 20
-TAG_COUNT = 5
-LAST_TAG = "#刀客轻研"
+TAG_COUNT = 6                      # 2026-10 用户口径：6 个 tag
+LAST_TAGS = ["#刀客轻研", "#SciLink"]  # 末两位固定：品牌词 + 产品词
 
 # level: FAIL 必须改 / WARN 建议改 / INFO 人工确认
 RULES = [
@@ -83,7 +83,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("draft")
     ap.add_argument("--title", default=None)
-    ap.add_argument("--tags-any", action="store_true", help="不强制 5 个 tag")
+    ap.add_argument("--tags-any", action="store_true", help="不强制 6 个 tag")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
 
@@ -116,13 +116,17 @@ def main():
             add("FAIL", f"tag 有 {len(tags)} 个，应为 {TAG_COUNT} 个")
         else:
             add("PASS", f"tag {TAG_COUNT} 个")
-        if tags and tags[-1] != LAST_TAG:
-            add("FAIL", f"最后一个 tag 必须是 {LAST_TAG}，现在是 {tags[-1] if tags else '空'}")
-        elif tags:
-            add("PASS", f"末位 tag 为 {LAST_TAG}")
+        tail = tags[-len(LAST_TAGS):] if len(tags) >= len(LAST_TAGS) else tags
+        if tail != LAST_TAGS:
+            add("FAIL", f"末两位 tag 必须是 {' '.join(LAST_TAGS)}，现在是 {' '.join(tail) or '空'}")
+        else:
+            add("PASS", f"末两位 tag 为 {' '.join(LAST_TAGS)}")
 
-    fails = sum(1 for h in report["hits"] if h["level"] == "FAIL")
-    warns = sum(1 for h in report["hits"] if h["level"] == "WARN")
+    # 计数要把 tag/标题/字数这些 checks 也算进去，否则「→ FAIL（FAIL 0）」自相矛盾
+    fails = sum(1 for h in report["hits"] if h["level"] == "FAIL") + \
+        sum(1 for c in report["checks"] if c["level"] == "FAIL")
+    warns = sum(1 for h in report["hits"] if h["level"] == "WARN") + \
+        sum(1 for c in report["checks"] if c["level"] == "WARN")
     report["verdict"] = "FAIL" if (fails or any(c["level"] == "FAIL" for c in report["checks"])) else "PASS"
 
     if a.json:
