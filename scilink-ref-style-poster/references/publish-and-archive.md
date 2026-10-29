@@ -60,22 +60,46 @@ shasum -a 256 本地图.png v.png
 
 ## 四、同步到 GitHub（用户自己的 skill 仓库）
 
-仓库：`git@github.com:MRF3247/-skills.git`（注意仓库名以连字符开头，写全路径；GitHub 已从 mrf3247 改名为 MRF3247）。该仓库平时放平铺的单文件 prompt，**本 skill 用目录形式上传**（因为带 assets 与 scripts）。
+仓库：`https://github.com/MRF3247/-skills`（公开仓库）。两个 skill 一起推：`scilink-ref-style-poster` 与 `scilink-xhs-writing`，它们指向同一份规范，只推一个会立刻不一致。
+
+**本地目录名不要用 `-skills`**：仓库名以连字符开头，`git clone <url> -skills` 会把目标目录当成 flag 解析，卡死或报错。用 `mrf-skills` 这类普通名字。
+
+**大二进制会拖死全量 clone**：仓库约 20MB（PSD 7.5MB + 6 张参考图），`git clone` 与 `codeload` tarball 都可能卡到超时，而 `git ls-remote` 和 `api.github.com` 是秒回。所以只把要改的文本拉进工作区：
 
 ```bash
-cd <临时目录>
-git clone --depth 1 git@github.com:MRF3247/-skills.git
-cp -R ~/.hermes/skills/scilink-ref-style-poster ./scilink-ref-style-poster
-rm -rf ./scilink-ref-style-poster/**/__pycache__
-git add -A scilink-ref-style-poster
-# 本机没配 git 身份时用 -c 临时指定，别改用户全局配置
-git -c user.name="MRF3247" -c user.email="maolpha@hotmail.com" commit -m "update: scilink-ref-style-poster v<版本>"
+cd ~/Documents/GitProgram
+git clone --filter=blob:none --no-checkout --depth 1 https://github.com/MRF3247/-skills.git mrf-skills
+cd mrf-skills
+git sparse-checkout set --no-cone '/*.md' 'scilink-xhs-writing/**' \
+  'scilink-ref-style-poster/**/*.md' 'scilink-ref-style-poster/**/*.py'
+git checkout main
+```
+
+**推之前逐文件 diff，不要直接 rsync 覆盖**：仓库里的副本可能是另一台机器或另一个工作分支改过的（实测仓库里两个 `references/*.md` 还写着旧目录名 `ref-style-poster`，本地早已改成 `scilink-` 前缀）。覆盖前先 `diff 仓库文件 本地文件`，确认本地确实更新才盖；仓库侧有本地没有的修正时先合再推。
+
+```bash
+for sk in scilink-xhs-writing scilink-ref-style-poster; do
+  rsync -a --exclude 'assets' --exclude '__pycache__' --exclude '.DS_Store' \
+    ~/.hermes/skills/$sk/ $sk/
+done
+git add -A && git status --short      # 逐行核对：只应有该改的文件
+# 版本号从 SKILL.md frontmatter 取；本机全局身份为空，必须 -c 现场传入
+git -c user.name="MRF3247" -c user.email="maolpha@hotmail.com" \
+  commit -m "update: <skill> v<版本>"
 git push origin main
+```
+
+**验证以远端树为准**（push 打印成功不等于内容对）：
+
+```bash
+curl -s "https://api.github.com/repos/MRF3247/-skills/git/trees/main?recursive=1"
+# 远端每个 blob 的 size 与本地 os.path.getsize 逐条比对；assets/ 跳过（sparse 未拉，两边字节数一致即未变）
 ```
 
 坑：
 
-- 本机 **没有 gh CLI**，不要用 `gh repo ...`；SSH key 在 `~/.ssh/id_ed25519`，push 走 SSH 即可。
-- 全局 `git config user.name/email` 为空，commit 必须现场用 `-c` 传入，否则报身份未知。
-- 仓库约 20MB（PSD 7.5MB + 5 张参考图 11MB），单文件都远低于 100MB 限制，不要为了瘦身去转码参考图——那会连带改掉 SKILL.md 里的路径。
-- 验证：`curl -sS https://api.github.com/repos/MRF3247/-skills/contents/scilink-ref-style-poster` 能看到 SKILL.md 与 assets/references/scripts 三个目录。
+- **别把 `rm -rf <工作区>` 写在 background 命令的开头**：后台命令会在调度晚得多的时候才真正执行，前面那次 clone 可能已经跑完，于是它把你正在用的工作区删掉了（后续所有命令都报 `No such file or directory`，因为 terminal 会话的 cwd 已不存在）。要重建就前台 `rm -rf`，或在每条命令里显式传 `workdir`。
+- 本机 **没有 gh CLI**，不要用 `gh repo ...`。HTTPS push 凭据在 `~/.git-credentials`（helper=store），SSH key 在 `~/.ssh/id_ed25519`，两条路都能推。
+- 全局 `git config user.name/email` 为空，commit 必须现场用 `-c` 传入，否则报身份未知；不要改用户全局配置。
+- 仓库约 20MB，单文件都远低于 100MB，**不要为了瘦身去转码参考图**——那会连带改掉 SKILL.md 里的路径。
+- `assets/` 本地与远端字节数通常完全一致，不需要重传；要更新参考图时单独把该文件拷进去再 `git add`。

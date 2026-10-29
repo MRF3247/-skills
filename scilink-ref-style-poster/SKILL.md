@@ -1,7 +1,7 @@
 ---
 name: scilink-ref-style-poster
 description: Use when 生成刀客轻研标准小红书封面（3:4）。
-version: 2.4.0
+version: 2.4.1
 author: Hermes Agent
 license: MIT
 metadata:
@@ -293,7 +293,8 @@ python3 <skill>/scripts/shot_p2p3.py \
   [--masthead "PubMed · British Journal of Anaesthesia · 2026-10-24 · PMID 42926172 · DOI 10.xxxx/xxxxx"]
 # 输出 /tmp/shots/<slug>-p2.png（1080×1440）、-p3.png（1080×1440）
 # stdout JSON: http / mark / y_para / p3_dup_of_p2 / crop_x
-# 只要一张（P3 会重复时）：--only p2 --mark-in p2 --mark-mode para
+# 要带黄条的 P2：--only both --mark-mode para  ← P3 重复会被自动跳过，stdout 里 p3_dup_of_p2=true
+# 要「干净无黄条」的 P2：--only p2 --mark-mode none   ← 实测 --only p2 分支不打点，出来就是干净图
 ```
 
 - **`--masthead` 是给「页面自己不显示题录」的站准备的**（PubMed 文献页实测：只渲染 Abstract，标题/期刊/日期全在不同区块且常不渲染）。它会在截图顶部插一条灰字题录行，把站点·期刊·日期·PMID·DOI 补齐，并在文档里注明「该页未渲染标题，题录见顶部行」。
@@ -353,7 +354,7 @@ python3 <skill>/scripts/shot_p2p3.py \
 
 ## 两条硬规则（2026-10 用户当场追问出来的）
 
-0. **专题封面的主标＝专题名，不是顶部胶囊**（用户原话：「ESMO2026专题的字样为什么是一个小小的胶囊？这个应该是主标」）。成组专题一律用 `add_cover_text.py 成品.png 输出.png "ESMO 2026专题" --subtitle "<这篇的研究主题>"`——主标大字放底部文案区，副标小字在下；`--badge` 胶囊只在普通单条需要栏目标识时才用，**不得拿它当主标**。
+0. **专题封面的主标＝专题名，不是顶部胶囊**（用户原话：「ESMO2026专题的字样为什么是一个小小的胶囊？这个应该是主标」）。成组专题一律 `add_cover_text.py 成品.png 输出.png "ESMO 2026专题" --subtitle "<这一篇的封面钩子文案>"`——主标大字放底部文案区，副标小字在下；**副标就是「封面文案」字段里定好的那句钩子**（如「骨肉瘤 十年等到一个阳性」），不是自动生成的「XX研究」这种干主题；`--badge` 胶囊只在普通单条需要栏目标识时才用，**不得拿它当主标**。
 
 1. **不得跳过 finalize_cover**。完整管线固定为 `art → warm_grain → finalize_cover(PSD) → palette_check → add_cover_text`。直接对原始出图跑 add_cover_text 的后果：没 logo、没顶部白渐变、没底部蓝渐变、字号与安全区全不对——用户一眼就能看出“排版不一样了”（已实际发生）。验收时先看成品是否带 logo 与底部渐变，没有就是跳过了模板。
 2. **用了外部参考图，必须把参考图插进文档**（引用块小图 ~420px）+ 文字写明出处（期刊/PDB ID + 链接）；只写 DOI 不放图不算。
@@ -383,8 +384,8 @@ python3 scripts/draw_scenes.py '{"scene":"adc","organ":"stomach","out":"clarity_
 **硬规则（调试出来的）**
 1. **底部必须有深蓝块**（y≥980 全宽）承白色文案；否则 `add_cover_text.py` 的白字压在米白底上对比度不足。
 2. **不要在球体内部画同心圆/受光圆**——两个深圆点 + 对称＝“机器人脸”；口袋开在球体**边缘**（半在外），里面嵌深色六边形。
-3. 抗体必须 **Fab 臂贴受体、载荷挂 Fc 尾**；画反了专业读者一眼看出。
-4. 出图先过 `vision_analyze` 问“像不像脸 / 能不能一眼看懂”，再进封面。
+3. **ADC／抗体偶联药物图的三点结构准绳（Kimi 审出、内行一眼看穿）**：① 抗体的两条臂用**臂尖（Fab 末端可变区）**精准搭在受体突起的**顶端**，不是用臂的外侧弧面贴（弧面贴＝“用胳膊夹抗原”，错）；② 载荷用与受体突起**不同的异形**（星形/菱形）挂载，别和靶点画成同一种造型，否则读者分不清谁是药谁是靶；③ 载荷用**一小段短连接子**接在抗体主干上，不是从主干直接长出一根长柄（长柄像天线，会被当成抗体自身结构）。画反或同造型，专业读者一眼看出。
+4. 出图先过 `vision_analyze` 问“像不像脸 / 能不能一眼看懂”，再进封面；vision 额度不足时走 `python3 ~/Documents/Hermes/scripts/kimi_ask.py '<问题>' <图>`（KIMI 看图通道）核结构，不要硬等 vision。
 
 ## P3 裁剪的坑（retina / 长页面）
 
@@ -408,7 +409,7 @@ python3 scripts/draw_scenes.py '{"scene":"adc","organ":"stomach","out":"clarity_
 - [ ] 已叠 PSD（顶部有 logo、底部有蓝渐变）
 - [ ] **汇报时点名 skill**：说「写进 skill」时必须写清是 `scilink-ref-style-poster`（封面、生图、P2-P3、色板）还是 `scilink-xhs-writing`（正文字句、标题、排版）——用户明确要求。混在一起说会被打回。
 - [ ] **画风是扁平矢量插画（不是 3D）**；有细密颗粒噪点；亮部有淡淡暖黄光
-- [ ] 要「封面（带文案）」时用 `scripts/add_cover_text.py 成品.png 输出.png "主标题" [--subtitle "副标题"] [--badge "ESMO2026专题"]`。两种专题写法：**① 主/副标题两级（用户 2026-10 选的口径）**——主标题＝专题名（「ESMO 2026专题」）放大字、副标题＝这一篇的研究主题（「小细胞肺癌维持治疗3期研究」）用 `--subtitle`，字号默认 0.42×；**② 顶部胶囊 `--badge`**（logo 在 y 26–89，胶囊从 y=112 起），不占 y≈950 文案位。普通单条不加专题层
+- [ ] 要「封面（带文案）」时用 `scripts/add_cover_text.py 成品.png 输出.png "主标题" [--subtitle "副标题"] [--badge "ESMO2026专题"]`。两种专题写法：**① 主/副标题两级（用户 2026-10 选的口径）**——主标题＝专题名（「ESMO 2026专题」）放大字、副标题＝这一篇的封面钩子文案（「骨肉瘤 十年等到一个阳性」这类，取自「封面文案」字段）用 `--subtitle`，字号默认 0.42×；**② 顶部胶囊 `--badge`**（logo 在 y 26–89，胶囊从 y=112 起），不占 y≈950 文案位。普通单条不加专题层
 - [ ] **上传附件前把成品复制到当前工作目录或 `/tmp`**：`+record-upload-attachment --file` 只认 cwd／`/tmp`／`~/files`，给 `~/Documents/Obsidian Vault/...` 会报 `unsafe file path`；附件字段是**追加**语义，重复上传会出现两条同名记录，用 `+record-remove-attachment --file-token <token> --yes` 清掉；**上传时不要加 `--yes`**——它只用于 remove 这类动作，加在 upload 上会静默跳过（回 ok 但字段仍为空，读回才发现）
 - [ ] **生图前确认文字三列已定稿**（`封面建议文案`／`图文建议标题`／正文）：文案是后处理叠的，改文案只重跑 `add_cover_text.py`（秒级零算力），改构图才烧一次模型；标准节奏＝文字全部定稿 → 用户点名哪几条 → 再出图
 - [ ] 资讯稿的 P2／P3 走 `scripts/shot_p2p3.py`：两张都 1080×1440、无广告残留、高亮是**整句或整段**；P3 与 P2 重复时只交 P2
