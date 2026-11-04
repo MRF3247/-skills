@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  政策速读 / 来源配图 一套两页的骨架（1080×1440）
+  用法：复制两份，只改 <div class="tag"> 文案 与 .stage img 的 src。
+        封面 tag=「政策速读」→ 官方文件整页首页；P2 tag=「原文截图」→ 新闻页到标题为止。
+  图片不要临时造：先裁好（官方件裁掉上下空页边、缩到高 1240；新闻页裁到 x=0 起、去侧栏广告）。
+  渲染：
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
+      --hide-scrollbars --force-device-scale-factor=2 --window-size=1080,1440 \
+      --screenshot=/tmp/out_2x.png "file://<此文件绝对路径>"
+    再用 PIL resize 到 1080×1440 出成品。
+  硬规矩：中间不自写文案；底部蓝条不写字；两页天头地脚必须同构。
+-->
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Regular.ttf');font-weight:400;}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Demibold.ttf');font-weight:600;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1080px;height:1440px;background:#fff;font-family:'MiSans',sans-serif;color:#1A222C;position:relative;overflow:hidden;}
+/* 天头 90px：左栏目标签 + 右 logo/关键词 */
+.top{position:absolute;left:60px;top:0;width:960px;height:90px;display:flex;align-items:center;justify-content:space-between;}
+.tag{font-size:20px;font-weight:600;color:#006EBB;letter-spacing:1px;border:2px solid #006EBB;border-radius:18px;padding:4px 16px;}
+.brand{text-align:right;}
+.brand img{height:28px;display:block;margin-left:auto;}
+.brand .kw{font-size:15px;color:#6B7787;margin-top:5px;letter-spacing:.5px;}
+.rule{position:absolute;left:60px;top:90px;width:960px;height:1px;background:#E3E8EF;}
+/* 中间 1240px：只放材料截图，不加任何文案 */
+.stage{position:absolute;left:0;top:100px;width:1080px;height:1240px;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;background:#fff;}
+.stage img{display:block;}
+/* 底部 100px：纯色，不写字 */
+.foot{position:absolute;left:0;bottom:0;width:1080px;height:100px;background:#006EBB;}
+</style></head>
+<body>
+  <div class="top">
+    <div class="tag">政策速读</div>
+    <div class="brand">
+      <img src="file:///Users/Jin/.hermes/skills/scilink-ref-style-poster/assets/logo.png">
+      <div class="kw">医学前沿 · 科研动态 · 医务生活</div>
+    </div>
+  </div>
+  <div class="rule"></div>
+  <div class="stage"><img src="/tmp/material.png"></div>
+  <div class="foot"></div>
+</body></html>

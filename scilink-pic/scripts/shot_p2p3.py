@@ -18,7 +18,7 @@
 需要 camofox 在 :9377（GET /health）。
 """
 import json, os, time, urllib.request, argparse
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
 B = "http://127.0.0.1:9377"
@@ -37,13 +37,33 @@ HIDE = """
 [class*=error], [class*=alert], [role=alert], [class*=sidebar],
 [class*=article-actions], [class*=full-text-links], [class*=citation-actions],
 [class*=search-bar], [class*=nav-menu], [class*=results-actions],
-[class*=search-form], #search-form, [class*=navbar], [class*=top-bar]
+[class*=search-form], #search-form, [class*=navbar], [class*=top-bar],
+[role=dialog], [class*=popup], [id*=popup], [class*=Popup], [id*=Popup],
+[class*=dialog], [class*=Dialog], [class*=subscribe], [id*=subscribe],
+[class*=cta-modal], [class*=lightbox], [class*=ml-], [class*=om-]
 {display:none !important;}
 img {max-width:100% !important; height:auto !important;}
 * {animation:none !important; transition:none !important;}
 mark.hlmark {background: rgba(255,235,59,0.55) !important; color:#000 !important;
   padding:1px 2px; border-radius:2px;}
 """
+
+
+OVERLAY_JS = r"""(()=>{let n=0;
+  const vw=window.innerWidth, vh=window.innerHeight, area=vw*vh;
+  document.querySelectorAll('body *').forEach(e=>{
+    try{
+      const cs=getComputedStyle(e);
+      if(cs.position!=='fixed' && cs.position!=='sticky') return;
+      const b=e.getBoundingClientRect();
+      if(b.width*b.height < area*0.18) return;              // 太小的不改动
+      const z=parseInt(cs.zIndex||'0',10);
+      const txt=(e.textContent||'').toLowerCase();
+      const spammy=/subscribe|newsletter|sign up|donate|cookie|accept|in your inbox/.test(txt);
+      if(z>=20 || spammy || cs.backgroundColor!=='rgba(0, 0, 0, 0)'){ e.remove(); n++; }
+    }catch(_){}
+  });
+  return n;})()"""
 
 CLEAN_JS = r"""(()=>{let n=0;
   document.querySelectorAll('div,section,aside,figure').forEach(e=>{
@@ -127,6 +147,9 @@ def main():
     ap.add_argument("--mark-in", default="p3", choices=["p2", "p3", "both"])
     ap.add_argument("--keep-header", action="store_true", help="保留 <header>/<nav>/<footer>（PubMed 等把标题作者放在 header 里的站必须开）")
     ap.add_argument("--masthead", default="", help="截图顶部追加一行出处（站点·PMID·期刊·日期），补页面本身缺失的题录")
+    ap.add_argument("--meta-out", default="", help="把标题/高亮段坐标写成 JSON，供合成中文标题使用")
+    ap.add_argument("--title-hint", default="", help="标题开头一小段文字，用于定位标题元素（PubMed 等无 h1 时用）")
+    ap.add_argument("--zoom", type=float, default=1.0, help="页面缩放（<1 缩小，长段落一屏能装下，如 0.62）")
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     tid = post("/tabs", {"userId": UID, "sessionKey": "p2p3"})["tabId"]
@@ -147,6 +170,9 @@ def main():
           return n;})()""")
         hide_css = HIDE.replace("{HEADER_PART}", "" if a.keep_header else "header, nav, footer,")
         ev(tid, "(()=>{const s=document.createElement('style');s.textContent=%s;document.head.appendChild(s);return 1;})()" % json.dumps(hide_css))
+        if a.zoom and a.zoom != 1.0:
+            ev(tid, "(()=>{document.body.style.zoom='%s';return 1;})()" % a.zoom)
+            res["zoom"] = a.zoom
         post(f"/tabs/{tid}/viewport", {"userId": UID, "width": VW, "height": VH})
         ev(tid, r"""(()=>{let y=0;const t=setInterval(()=>{window.scrollBy(0,800);y+=800;
           if(y>document.body.scrollHeight+1600){clearInterval(t);window.scrollTo(0,0);}},60);return 1;})()""")
@@ -154,11 +180,12 @@ def main():
         res["clean"] = ev(tid, CLEAN_JS)
         time.sleep(2)
         res["deadimg"] = ev(tid, DEAD_IMG_JS)
-        if a.masthead:
-            ev(tid, """(()=>{const d=document.createElement('div');
-              d.textContent=%s;
-              d.style.cssText='font:13px/1.7 -apple-system,Helvetica,Arial,sans-serif;color:#888;padding:10px 0 4px';
-              document.body.insertBefore(d, document.body.firstChild);return 1;})()""" % json.dumps(a.masthead))
+        # masthead 改为截图后由 PIL 在顶部画一条灰字题录带：页内插入会被站点布局挤成窄栏/裁掉
+
+        # 延迟注入的弹窗（newsletter / dialog）在第一轮 hide 之后才出现，截图前再清一次
+        res["overlay"] = ev(tid, OVERLAY_JS)
+        ev(tid, "(()=>{const s=document.createElement('style');s.textContent=%s;document.head.appendChild(s);return 1;})()" % json.dumps(hide_css))
+        time.sleep(1)
 
         # P3 段落的纵向位置（先量，用于去重判断与裁切）
         y_para = None
@@ -174,9 +201,43 @@ def main():
             if do_mark:
                 res["mark"] = ev(tid, MARK_JS % (json.dumps(a.anchor), json.dumps(a.mark_mode)))
 
-        res["box"] = ev(tid, r"""(()=>{const ps=Array.from(document.querySelectorAll('p')).filter(p=>(p.textContent||'').trim().length>40);
+        # 导出元素坐标（标题 / 高亮段），供后续合成中文标题与译文物件
+        meta = ev(tid, r"""(()=>{
+          const g=e=>{if(!e)return null;const b=e.getBoundingClientRect();return [Math.round(b.left),Math.round(b.top+window.scrollY),Math.round(b.right),Math.round(b.bottom+window.scrollY)];};
+          const hint=%s;
+          let h1=Array.from(document.querySelectorAll('h1')).filter(e=>e.getBoundingClientRect().width>0)[0]||null;
+          if(!h1 && hint){
+            const cands=Array.from(document.querySelectorAll('h1,h2,h3,div,span,p,strong'))
+              .filter(e=>{const t=(e.textContent||'').trim();return t.startsWith(hint)&&e.getBoundingClientRect().width>0;});
+            cands.sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length);
+            h1=cands[0]||null;
+          }
+          const ps=Array.from(document.querySelectorAll('p')).filter(p=>(p.textContent||'').trim().length>40);
+          const hl=document.querySelector('mark.hlmark');
+          const hp=hl?hl.closest('p'):null;
+          const apEl=Array.from(document.querySelectorAll('p')).find(p=>(p.textContent||'').includes(%s));
+          return JSON.stringify({title:g(h1), anchorPara:g(apEl), hlPara:g(hp)});
+        })()""" % (json.dumps(a.title_hint or ""), json.dumps(a.anchor or "")))
+        res["meta"] = meta
+        try:
+            if a.meta_out:
+                open(a.meta_out, "w").write(meta)
+        except Exception:
+            pass
+
+        res["box"] = ev(tid, r"""(()=>{
+          const main = document.querySelector('article, main, [role=main], .entry-content, .post-content');
+          const scope = main || document.body;
+          let ps = Array.from(scope.querySelectorAll('p')).filter(p=>(p.textContent||'').trim().length>40);
+          if(!ps.length) ps = Array.from(document.querySelectorAll('p')).filter(p=>(p.textContent||'').trim().length>40);
+          // 隐藏元素（display:none）的 rect 全是 0，会把左边界拉到 0 → 只留可见段
+          ps = ps.filter(p=>{const b=p.getBoundingClientRect(); return b.width>0 && b.height>0;});
           if(!ps.length) return null;
-          let l=1e9,r=0;ps.forEach(p=>{const b=p.getBoundingClientRect();l=Math.min(l,b.left);r=Math.max(r,b.right);});
+          // 一律用 10/90 分位：整宽段落（CTA、图注）会把 min/max 拉到整页，裁出大片空白
+          const L=ps.map(p=>p.getBoundingClientRect().left).sort((a,b)=>a-b);
+          const R=ps.map(p=>p.getBoundingClientRect().right).sort((a,b)=>a-b);
+          const q=(arr,f)=>arr[Math.min(arr.length-1, Math.floor(arr.length*f))];
+          let l=q(L,0.10), r=q(R,0.90);
           return JSON.stringify([Math.round(l),Math.round(r)]);})()""")
         res["vp"] = ev(tid, "[window.innerWidth, document.body.scrollHeight]")
         time.sleep(1.5)
@@ -194,6 +255,14 @@ def main():
         if not (r_ > l):
             l, r_ = 0, W
         x0, x1 = max(0, int(l) - 24), min(W, int(r_) + 24)
+        # 最小宽度兜底：正文栏太窄时 3:4 窗口会矮到把高亮段裁掉，向两侧扩到 MIN_W
+        MIN_W = 900
+        if x1 - x0 < min(MIN_W, W):
+            target = min(MIN_W, W)
+            cx = (x0 + x1) // 2
+            x0 = max(0, cx - target // 2)
+            x1 = min(W, x0 + target)
+            x0 = max(0, x1 - target)
         cw = x1 - x0
         win_h = int(cw * 4 / 3)
         res["crop_x"] = [x0, x1, win_h]
@@ -202,22 +271,43 @@ def main():
         ink = np.where(g.min(axis=1) < 245)[0]
         top = int(ink[0]) if len(ink) else 0
         top = max(0, min(top, H - win_h))
+        band_h = 52 if a.masthead else 0
+        body_h = win_h - band_h
 
         # 去重：P3 段落起点已在 P2 范围内 → 不出 P3
-        dup = y_para is not None and top <= int(y_para) < top + win_h * 0.62
+        # 去重只在同时要 P2+P3 时才有意义；单独要 P3 时不能把自己判重
+        dup = (a.only == "both") and y_para is not None and top <= int(y_para) < top + win_h * 0.62
         res["p3_dup_of_p2"] = bool(dup)
 
+        def _save_with_band(src_top, path):
+            body = im.crop((x0, src_top, x1, src_top + body_h)).resize((1080, 1440 - band_h), Image.LANCZOS)
+            canvas = Image.new("RGB", (1080, 1440), "white")
+            canvas.paste(body, (0, band_h))
+            if band_h:
+                d = ImageDraw.Draw(canvas)
+                f = None
+                for _c, _i in (("/System/Library/Fonts/Hiragino Sans GB.ttc", 0),
+                               ("/System/Library/Fonts/STHeiti Medium.ttc", 0),
+                               ("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", 0),
+                               ("/System/Library/Fonts/Supplemental/Songti.ttc", 0)):
+                    try:
+                        f = ImageFont.truetype(_c, 22, index=_i); break
+                    except Exception:
+                        continue
+                if f is None:
+                    f = ImageFont.load_default()
+                d.text((30, 14), a.masthead, fill=(130, 130, 130), font=f)
+            canvas.save(path)
+
         if a.only in ("both", "p2"):
-            im.crop((x0, top, x1, top + win_h)).resize((1080, 1440), Image.LANCZOS).save(
-                os.path.join(OUT, a.slug + "-p2.png"))
+            _save_with_band(top, os.path.join(OUT, a.slug + "-p2.png"))
             res["p2"] = f"{OUT}/{a.slug}-p2.png"
 
         if a.only in ("both", "p3") and not dup and y_para is not None:
             scale = W / float((res.get("vp") or [VW, H])[0]) or 1.0
             y0 = int(y_para * scale)
             ytop = max(0, min(int(y0 - win_h * 0.16), H - win_h))
-            im.crop((x0, ytop, x1, ytop + win_h)).resize((1080, 1440), Image.LANCZOS).save(
-                os.path.join(OUT, a.slug + "-p3.png"))
+            _save_with_band(ytop, os.path.join(OUT, a.slug + "-p3.png"))
             res["p3"] = f"{OUT}/{a.slug}-p3.png"
             res["y3"] = ytop
     finally:

@@ -1,0 +1,78 @@
+<!--
+引流封面（二维码海报）—— 已跑通的骨架，1080×1440。
+换稿只改四处：
+  ① 主标题两行（第二行是钩子，关键词用 <em> 变品牌蓝）
+  ② 二维码区右侧两行 CTA（t1 + t2 副说明）
+  ③ 四行能力胶囊（每行 3 项，用 <i>·</i> 分隔；按自家能力清单换词）
+  ④ 底部三卡卖点（大字 2 字 + 一行小字，第三个建议放数字背书）
+固定项不要动：右上角 标签(badge)+logo 的 order/间距、标题上 74px 留白、
+二维码 296px + 白底静区、胶囊 1.8px 蓝描边圆角 999px、深蓝页脚。
+渲染见 SKILL.md「栏目 · 引流封面」节：window 开 1080×1440、2x、核底部距页脚 60–90px。
+-->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Regular.ttf');font-weight:400}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Medium.ttf');font-weight:500}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Demibold.ttf');font-weight:600}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Bold.ttf');font-weight:700}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Heavy.ttf');font-weight:800}
+:root{--brand:#006EBB;--deep:#004E86;--ink:#16202B;--line:#DCE3EB;--wash:#EFF6FC}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;height:1440px;font-family:'MiSans',-apple-system,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
+.page{width:1080px;height:1440px;position:relative;overflow:hidden;padding:52px 64px 0;background:#fff}
+.head{display:flex;justify-content:flex-end;align-items:center;gap:16px}
+.head img{height:42px;order:2}
+.badge{background:var(--brand);color:#fff;font-size:21px;font-weight:700;letter-spacing:1.5px;padding:9px 18px;border-radius:6px;order:1}
+h1{font-size:90px;line-height:1.18;font-weight:800;letter-spacing:-1px;margin-top:74px}
+h1 em{font-style:normal;color:var(--brand)}
+.rule{height:3px;background:var(--ink);margin-top:34px}
+.qrzone{margin-top:30px;background:var(--wash);border-radius:18px;padding:24px 32px;display:flex;align-items:center;gap:34px}
+.qrbox{flex:0 0 auto;background:#fff;border-radius:12px;padding:14px}
+.qrbox img{width:296px;height:296px;display:block;border-radius:6px}
+.qrtext{flex:1}
+.qrtext .t1{font-size:38px;font-weight:800;line-height:1.36}
+.qrtext .t1 span{color:var(--brand)}
+.qrtext .t2{font-size:21px;color:#4A5563;margin-top:14px;line-height:1.55;font-weight:500}
+.pills{display:flex;flex-direction:column;gap:13px;margin-top:30px}
+.pill{background:#fff;border:1.8px solid var(--brand);color:var(--brand);border-radius:999px;
+  font-size:26px;font-weight:700;letter-spacing:1px;text-align:center;padding:15px 10px}
+.pill i{font-style:normal;color:#9FB6CC;margin:0 13px}
+.points{display:flex;gap:14px;margin-top:30px}
+.p{flex:1;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:20px 12px;text-align:center}
+.p .n{font-size:32px;font-weight:800;color:var(--brand)}
+.p .d{font-size:20px;color:#4A5563;margin-top:7px;font-weight:500}
+.foot{position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--deep);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 64px;font-size:20px;letter-spacing:1px}
+</style></head><body>
+<div class="page">
+  <div class="head">
+    <span class="badge">科研 AI 工作台</span>
+    <img src="file:///Users/Jin/.hermes/skills/scilink-ref-style-poster/assets/logo.png">
+  </div>
+  <h1>扫码领<em>免费额度</em><br>科研不用自己硬扛</h1>
+  <div class="rule"></div>
+
+  <div class="qrzone">
+    <div class="qrbox"><img src="file:///Users/Jin/Documents/素材/刀客轻研小助手二维码.jpg"></div>
+    <div class="qrtext">
+      <div class="t1">扫码添加<span>企微客服</span><br>立领免费额度</div>
+      <div class="t2">加客服即送免费积分，从选题到投稿都能用</div>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div class="pill">科研选题<i>·</i>文献综述<i>·</i>论文阅读</div>
+    <div class="pill">研究设计<i>·</i>开题报告<i>·</i>方案撰写</div>
+    <div class="pill">数据清洗<i>·</i>机器学习<i>·</i>预测模型</div>
+    <div class="pill">统计分析<i>·</i>科研绘图<i>·</i>投稿改稿</div>
+  </div>
+
+  <div class="points">
+    <div class="p"><div class="n">免费</div><div class="d">加了就领，不用付费</div></div>
+    <div class="p"><div class="n">即用</div><div class="d">不用装环境，直接跑</div></div>
+    <div class="p"><div class="n">专业</div><div class="d">188 万+ 医护生在用</div></div>
+  </div>
+
+  <div class="foot"><span>刀客轻研 · SciLink</span><span>医学前沿 · 科研动态 · 医务生活</span></div>
+</div>
+</body></html>

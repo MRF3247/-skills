@@ -1,0 +1,154 @@
+<!--
+论文速读卡（HTML / 2 页 / 论文专用）—— 已跑通的极简版骨架。
+换稿时只改四处：① 标题（中文大字 + 英文原题小字）② 作者主张 / 临床问题两卡的文字
+③ 摘要四个子块（Background / Methods / Findings / Interpretation）与配图路径 ④ 局限条目与页脚来源行。
+规则：天头「论文速读」徽标只放 P1；续页天头只有 logo + 关键词；段落间距宁松勿紧（底部大片空白＝间距没拉开，不是字段不够）。
+渲染见 SKILL.md「速读卡（HTML，2 页）」节：窗口开 1080×(1440×N)、2x、再按 i*2880 裁单页。
+-->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Regular.ttf');font-weight:400}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Medium.ttf');font-weight:500}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Demibold.ttf');font-weight:600}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Bold.ttf');font-weight:700}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Heavy.ttf');font-weight:800}
+:root{--brand:#006EBB;--ink:#1A222C;--muted:#7A8492;--line:#DDE3EA;--wash:#F3F8FD}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;font-family:'MiSans',-apple-system,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+.sheet{width:1080px;height:1440px;position:relative;overflow:hidden;padding:42px 52px 0;background:#fff}
+/* 天头 */
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.tag{display:inline-block;background:var(--brand);color:#fff;font-size:19px;font-weight:700;letter-spacing:3px;padding:6px 15px;border-radius:4px}
+.h1{font-size:42px;font-weight:800;line-height:1.32;margin-top:14px}
+.h1 .en{display:block;font-size:16px;font-weight:600;color:#7C8797;line-height:1.45;margin-top:9px;letter-spacing:.1px}
+.brand{text-align:right;flex:0 0 auto;margin-top:4px}
+.brand img{height:31px}
+.brand .kw{font-size:12.5px;color:var(--muted);margin-top:7px;letter-spacing:.5px}
+.rule{height:4px;background:#20262E;margin-top:22px}
+/* 导语两卡（摘要之上） */
+.lead{display:flex;gap:18px;margin-top:30px}
+.lead .c{flex:1;background:var(--wash);border-left:4px solid var(--brand);border-radius:6px;padding:14px 16px}
+.lead .c h4{font-size:15px;font-weight:800;color:var(--brand);letter-spacing:1px}
+.lead .c p{font-size:17px;line-height:1.72;margin-top:7px;color:#28323D}
+/* 摘要标题 */
+.sech{display:flex;align-items:baseline;gap:12px;margin-top:40px;padding-bottom:9px}
+.sech .en{font-size:32px;font-weight:800;letter-spacing:.2px}
+.sech .cn{font-size:32px;font-weight:800;color:var(--brand)}
+.sech-line{height:1px;background:#AAB2BC;width:42%}
+/* 子标题 + 正文 */
+.b{margin-top:34px}
+.b h3{font-size:23px;font-weight:800;letter-spacing:.4px}
+.b h3 span{color:var(--brand)}
+.b .en{font-size:18px;line-height:1.68;margin-top:10px;color:#1F2833}
+.b .cn{font-size:20.5px;line-height:1.74;margin-top:10px;padding-left:18px;border-left:4px solid var(--brand);color:#243040}
+.b.withfig{display:flex;gap:26px}
+.b.withfig .txt{flex:1}
+.b.withfig .fig{flex:0 0 300px;padding-top:4px}
+.b.withfig .fig img{width:300px;display:block;border:1px solid var(--line)}
+.b.withfig .fig .cap{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+/* 续页天头：只有右上 logo + 关键词 */
+.shead{display:flex;align-items:center;justify-content:flex-end;gap:14px}
+.shead .kw2{font-size:12.5px;color:var(--muted);letter-spacing:.5px}
+.shead img{height:28px}
+/* 局限 */
+.lim{margin-top:58px;background:var(--wash);border-radius:8px;padding:24px}
+.lim h3{font-size:23px;font-weight:800}
+.lim h3 span{color:var(--brand)}
+.lim .note{font-size:13.5px;color:var(--muted);margin-top:5px}
+.lim ul{list-style:none;margin-top:10px}
+.lim li{font-size:18px;line-height:1.68;padding-left:17px;position:relative;margin-top:15px;color:#26303B}
+.lim li:before{content:'';position:absolute;left:2px;top:11px;width:6px;height:6px;background:var(--brand);border-radius:50%}
+.foot{position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 52px;font-size:15px}
+.foot .pg{font-weight:700;letter-spacing:1px}
+</style></head><body>
+
+<!-- ============ P1 ＝ 作者主张 · 临床问题 · 摘要（Background + Findings 配图） ============ -->
+<div class="sheet">
+  <div class="head">
+    <div>
+      <span class="tag">论文速读</span>
+      <div class="h1">中文译名（大字，两行以内）
+        <span class="en">Original English title (trial acronym / registry nested here, smaller grey text)</span>
+      </div>
+    </div>
+    <div class="brand">
+      <img src="file:///Users/Jin/.hermes/skills/scilink-ref-style-poster/assets/logo.png">
+      <div class="kw">医学前沿 · 科研动态 · 医务生活</div>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <div class="lead">
+    <div class="c">
+      <h4>作者主张</h4>
+      <p>一句话写清作者的核心主张，用「作者据此认为……」收尾，不要扩写成段落。</p>
+    </div>
+    <div class="c">
+      <h4>临床问题</h4>
+      <p>这一线治疗缺什么、现有方案差在哪、要不要新机制——两句说完。</p>
+    </div>
+  </div>
+
+  <div class="sech"><span class="en">Abstract</span><span class="cn">摘要</span></div>
+  <div class="sech-line"></div>
+
+  <div class="b">
+    <h3>Background <span>· 背景</span></h3>
+    <div class="en">English background paragraph, quoted or closely paraphrased from the abstract.</div>
+    <div class="cn">中文译文；术语首次出现给一句大白话（如 ADC＝把细胞毒载荷挂在抗体上、由抗体带路送进肿瘤细胞）。</div>
+  </div>
+
+  <div class="b withfig">
+    <div class="txt">
+      <h3>Findings <span>· 结果</span></h3>
+      <div class="en">English findings with n, effect size, 95% CI and p as reported.</div>
+      <div class="cn">中文结果，数字照抄；缺失的写「原文未报告」，不做换算。</div>
+    </div>
+    <div class="fig">
+      <img src="file:///tmp/shots/fig_x.png">
+      <div class="cap">数据取自本文摘要，图为刀客轻研绘制</div>
+    </div>
+  </div>
+
+  <div class="foot"><span>PubMed · Journal · YYYY-MM-DD · PMID xxxxx · DOI 10.xxxx/xxxxx</span><span class="pg">1/2</span></div>
+</div>
+
+<!-- ============ P2 ＝ 方法 · 解读 · 局限 ============ -->
+<div class="sheet">
+  <div class="shead">
+    <span class="kw2">医学前沿 · 科研动态 · 医务生活</span>
+    <img src="file:///Users/Jin/.hermes/skills/scilink-ref-style-poster/assets/logo.png">
+  </div>
+  <div class="rule" style="margin-top:16px"></div>
+
+  <div class="b" style="margin-top:60px">
+    <h3>Methods <span>· 方法</span></h3>
+    <div class="en">English methods: design, population, randomisation, intervention vs comparator, endpoints, analysis set.</div>
+    <div class="cn">中文方法：设计、人群、随机方式、试验组/对照组、终点与分析方法。</div>
+  </div>
+
+  <div class="b" style="margin-top:64px">
+    <h3>Interpretation <span>· 解读</span></h3>
+    <div class="en">English interpretation paragraph from the abstract.</div>
+    <div class="cn">中文解读：作者怎么定性这个结果，以及「支持什么、不支持什么」。</div>
+  </div>
+
+  <div class="lim">
+    <h3>局限 <span>· Limitation</span></h3>
+    <!-- 作者承认就换成「作者承认」并删掉下面这行灰字；没承认才只写读者观察 -->
+    <div class="note">作者未在摘要中承认局限（摘要无局限讨论段），以下仅为读者观察。</div>
+    <ul>
+      <li>设计局限（如开放标签、单臂）对主观终点的影响。</li>
+      <li>随访时长与终点成熟度（如 OS 置信区间上限「未达到」）。</li>
+      <li>对照组是不是现行最优（有没有与联合方案/其它同类药头对头）。</li>
+      <li>是否有独立队列的外部验证。</li>
+      <li>安全性上试验组是否更差、摘要有没有给具体毒性谱。</li>
+      <li>未报告的生活质量／患者报告结局、未报告的亚组。</li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>PubMed · Journal · YYYY-MM-DD · PMID xxxxx · DOI 10.xxxx/xxxxx</span><span class="pg">2/2</span></div>
+</div>
+
+</body></html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!-- 刀客轻研单图长海报模板（1080 逻辑宽，2x 出图）。
+     用法：改文案 → Chrome headless --window-size=1080,3000 --force-device-scale-factor=2
+     → numpy 扫非白行裁掉尾部空白。见 SKILL.md「单图长海报」节。
+     二维码素材：/Users/Jin/Documents/素材/刀客轻研小助手二维码.jpg -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family:'MiSans'; src:url('file:///Users/Jin/Library/Fonts/MiSans-Regular.ttf'); font-weight:400; }
+  @font-face { font-family:'MiSans'; src:url('file:///Users/Jin/Library/Fonts/MiSans-Medium.ttf'); font-weight:500; }
+  @font-face { font-family:'MiSans'; src:url('file:///Users/Jin/Library/Fonts/MiSans-Demibold.ttf'); font-weight:600; }
+  @font-face { font-family:'MiSans'; src:url('file:///Users/Jin/Library/Fonts/MiSans-Bold.ttf'); font-weight:700; }
+  @font-face { font-family:'MiSans'; src:url('file:///Users/Jin/Library/Fonts/MiSans-Heavy.ttf'); font-weight:800; }
+
+  :root{
+    --brand:#006EBB;        /* 必须等于 logo 蓝，不要凭印象换近似色 */
+    --brand-deep:#004E86;
+    --ink:#1A222C;
+    --muted:#6B7787;
+    --line:#E3E8EF;
+    --wash:#F4F8FC;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    width:1080px; background:#fff; color:var(--ink);
+    font-family:'MiSans',-apple-system,'PingFang SC',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* 天头：左领域词 / 右 logo */
+  .head{display:flex;align-items:flex-start;justify-content:space-between;padding:52px 64px 0;}
+  .kicker{font-size:22px;letter-spacing:6px;color:var(--muted);font-weight:600;margin-top:14px;}
+  .logo{height:52px;}
+
+  /* 主标题 */
+  .titlewrap{padding:64px 64px 0;}
+  .badge{display:inline-block;background:var(--brand);color:#fff;font-size:24px;font-weight:700;
+         padding:10px 22px;border-radius:6px;letter-spacing:2px;}
+  h1{font-size:86px;line-height:1.16;font-weight:800;letter-spacing:-1px;margin-top:26px;}
+  h1 em{font-style:normal;color:var(--brand);}
+  .lead{font-size:30px;line-height:1.62;color:#3D4855;margin-top:26px;font-weight:400;}
+  .lead b{font-weight:700;color:var(--brand);}
+  .rule{height:3px;background:var(--ink);margin:52px 64px 0;}
+
+  /* 01/02/03 价值块 */
+  .values{padding:44px 64px 0;}
+  .v{display:flex;gap:26px;padding:30px 0;border-bottom:1px solid var(--line);}
+  .v:last-child{border-bottom:none;}
+  .num{flex:0 0 62px;height:62px;border-radius:50%;background:var(--wash);color:var(--brand);
+       font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .v h3{font-size:34px;font-weight:700;letter-spacing:.5px;}
+  .v p{font-size:26px;line-height:1.6;color:#4A5563;margin-top:10px;}
+
+  /* CTA：左文右码 */
+  .cta{margin:44px 64px 0;background:var(--brand);border-radius:18px;padding:44px 46px;color:#fff;
+       display:flex;align-items:center;justify-content:space-between;gap:40px;}
+  .cta .left{flex:1 1 auto;}
+  .cta .dl{font-size:24px;letter-spacing:4px;opacity:.85;font-weight:600;}
+  .cta .site{font-size:66px;font-weight:800;letter-spacing:1px;margin-top:12px;}
+  .cta .free{margin-top:26px;display:inline-block;background:#fff;color:var(--brand);
+             font-size:27px;font-weight:700;padding:14px 26px;border-radius:10px;}
+  .qr{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .qr img{width:196px;height:196px;border-radius:12px;display:block;background:#fff;}  /* 白底静区必须留 */
+  .qr span{font-size:21px;font-weight:600;letter-spacing:1px;color:#fff;opacity:.92;}
+
+  /* 信任点 + 结尾 */
+  .proof{margin:40px 64px 0;display:flex;align-items:center;gap:14px;font-size:25px;color:#3D4855;font-weight:500;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);}
+  .sign{margin:22px 64px 0;font-size:26px;color:var(--muted);}
+
+  /* 深蓝通栏页脚 */
+  .foot{margin-top:52px;background:var(--brand-deep);color:#fff;padding:26px 64px;
+        display:flex;justify-content:space-between;align-items:center;font-size:22px;letter-spacing:1px;}
+  .foot .k{opacity:.9;}
+</style>
+</head>
+<body>
+
+  <div class="head">
+    <div class="kicker">{{左上天头：领域词 · 领域词 · 领域词}}</div>
+    <img class="logo" src="file:///Users/Jin/.hermes/skills/scilink-ref-style-poster/assets/logo.png">
+  </div>
+
+  <div class="titlewrap">
+    <span class="badge">{{小标签}}</span>
+    <h1>{{主标题，关键词用 <em> 标品牌蓝}}<br>{{第二行痛点句}}</h1>
+    <p class="lead">{{导语：一句过渡 + <b>产品名/关键动作</b> + 覆盖范围}}</p>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="values">
+    <div class="v"><div class="num">01</div><div><h3>{{能力一}}</h3><p>{{一句解释}}</p></div></div>
+    <div class="v"><div class="num">02</div><div><h3>{{能力二}}</h3><p>{{一句解释}}</p></div></div>
+    <div class="v"><div class="num">03</div><div><h3>{{能力三}}</h3><p>{{一句解释}}</p></div></div>
+  </div>
+
+  <div class="cta">
+    <div class="left">
+      <div class="dl">立即使用</div>
+      <div class="site">{{domain.com}}</div>
+      <div class="free">{{兑换/联系动作}}</div>
+    </div>
+    <div class="qr">
+      <img src="file:///Users/Jin/Documents/素材/刀客轻研小助手二维码.jpg">
+      <span>扫码加企微客服</span>
+    </div>
+  </div>
+
+  <div class="proof"><span class="dot"></span>{{信任点，如：上海的三甲医院科研部都在用}}</div>
+  <div class="sign">{{结尾一句话}}</div>
+
+  <div class="foot">
+    <span class="k">刀客轻研 · SciLink</span>
+    <span>医学前沿 · 科研动态 · 医务生活</span>
+  </div>
+
+</body>
+</html>

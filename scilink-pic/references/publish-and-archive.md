@@ -40,6 +40,32 @@ shasum -a 256 本地图.png v.png
 - 三栏 grid 每栏占 1/3 版宽，竖图会缩得很小；如果只是存档没关系，要读者看清就得换栏宽比或只放一栏。
 - 一次只插一张就去删临时图，会导致后续 block id 失效、返工；先把所有图传完，再统一 replace，再一次删。
 
+### 另一条路线：media-upload + 指定父块（不生成临时图，推荐）
+
+`+media-insert` 一律落在文末、要事后删；要插到指定位置就用 `+media-upload`，上传时就指定父块，**不会产生临时图**：
+
+```bash
+TOKEN=$(lark-cli docs +media-upload --doc-id $DOC --file ./a.png \
+  --parent-type docx_image --parent-node <任意已有 block_id> --as user --format json \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['file_token'])")
+lark-cli docs +update --doc $DOC --command block_insert_after \
+  --block-id <目标前一块 id> --content "$(cat payload.xml)" --as user
+```
+
+`--parent-node` 只要是个合法块 id（文档开头那个 li 就行），图片位置由后续 `block_insert_after` 决定。回读时 `src` 会变成 `doxcn...` 的内部 token，那是正常的。
+
+### 整块替换 / 整节删改的三个命令
+
+| 目的 | 命令 |
+|---|---|
+| 两栏 grid 换成一张大图 | `block_replace --block-id <grid 的 id> --content '<img src="token"/>'`（直接换 grid 整块，不用先拆 column） |
+| 删掉整节（标题到最后一个图） | `block_delete --start-block-id <h2 id> --end-block-id <最后一块 id>` |
+| 往文末追加一整节 | `update --command append --content "$(cat section.xml)"`（不用定 block id） |
+
+范围删除靠 fetch `--detail with-ids` 拿到连续块 id 才能用；**写之前先 fetch 一次**，上一轮操作后所有 id 都变了。
+
+删除前确认目标区间里没有用户的批注/评论——范围删会把评论一起带走。
+
 ## 二、新闻原文截图 + 马克笔高亮
 
 用途：给稿件存证「原文标题 + 关键段落」。
@@ -60,7 +86,7 @@ shasum -a 256 本地图.png v.png
 
 ## 四、同步到 GitHub（用户自己的 skill 仓库）
 
-仓库：`https://github.com/MRF3247/-skills`（公开仓库）。两个 skill 一起推：`scilink-ref-style-poster` 与 `scilink-xhs-writing`，它们指向同一份规范，只推一个会立刻不一致。
+仓库：`https://github.com/MRF3247/-skills`（公开仓库）。两个 skill 一起推：`scilink-pic` 与 `scilink-xhs-writing`，它们指向同一份规范，只推一个会立刻不一致。
 
 **本地目录名不要用 `-skills`**：仓库名以连字符开头，`git clone <url> -skills` 会把目标目录当成 flag 解析，卡死或报错。用 `mrf-skills` 这类普通名字。
 
@@ -71,14 +97,14 @@ cd ~/Documents/GitProgram
 git clone --filter=blob:none --no-checkout --depth 1 https://github.com/MRF3247/-skills.git mrf-skills
 cd mrf-skills
 git sparse-checkout set --no-cone '/*.md' 'scilink-xhs-writing/**' \
-  'scilink-ref-style-poster/**/*.md' 'scilink-ref-style-poster/**/*.py'
+  'scilink-pic/**/*.md' 'scilink-pic/**/*.py'
 git checkout main
 ```
 
 **推之前逐文件 diff，不要直接 rsync 覆盖**：仓库里的副本可能是另一台机器或另一个工作分支改过的（实测仓库里两个 `references/*.md` 还写着旧目录名 `ref-style-poster`，本地早已改成 `scilink-` 前缀）。覆盖前先 `diff 仓库文件 本地文件`，确认本地确实更新才盖；仓库侧有本地没有的修正时先合再推。
 
 ```bash
-for sk in scilink-xhs-writing scilink-ref-style-poster; do
+for sk in scilink-xhs-writing scilink-pic; do
   rsync -a --exclude 'assets' --exclude '__pycache__' --exclude '.DS_Store' \
     ~/.hermes/skills/$sk/ $sk/
 done
