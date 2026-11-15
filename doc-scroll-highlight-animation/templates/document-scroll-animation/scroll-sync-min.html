@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--
+  台词同步滚动底稿 · 最小引擎（复制后改 stops/cues 两张表 + 正文即可）
+  必备能力：
+    · #t=秒  确定性跳帧（状态是 t 的纯函数）→ 任意时刻可截帧对位
+    · ?export=1 导出模式：禁 transition，高亮进度由 t 直接决定（逐帧确定，无过渡中途态）
+    · 全程线性微推近，杜绝静止帧
+    · 每个高亮元素必须带 data-g 分组，否则 fire() 静默空转
+  改时长只改 DUR 与 stops/cues，别改引擎。
+  浮出卡片/印章变体：把 .sheet 换成白卡底图 + 同样用 t 纯函数驱动卡片 scale/阴影；
+  印章落点按目标卡片终态几何实时计算（别钉固定 right/bottom px——卡片内容增删会改高度）。
+-->
+<html lang="en"><head><meta charset="UTF-8"><title>同步滚动底稿</title>
+<style>
+  :root{--ink:#1a1a1a;--paper:#fff;--brand:#1667d9;--hl:rgba(255,222,120,.92);--hl2:rgba(255,138,128,.9)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);overflow:hidden;background:#e9ebee}
+  #viewport{position:fixed;inset:0;background:var(--paper);overflow:hidden}
+  #brandbar{position:absolute;top:0;left:0;right:0;height:76px;background:#fff;border-bottom:1px solid #e3e3e3;display:flex;align-items:center;padding:0 64px;z-index:10;font-family:Helvetica,Arial,sans-serif;font-weight:800;letter-spacing:.14em}
+  #doc{position:absolute;top:76px;left:0;right:0;will-change:transform;transform-origin:50% 0;padding:64px 0 40vh}
+  .sheet{width:min(1150px,86vw);margin:0 auto}
+  p.body{font-size:22.5px;line-height:1.78;margin-bottom:46px}
+  mark.hl{color:inherit;border-radius:3px;padding:1px 3px;box-decoration-break:clone;-webkit-box-decoration-break:clone;
+    background:linear-gradient(100deg,transparent 1%,var(--c,var(--hl)) 4%,var(--c,var(--hl)) 96%,transparent 99%) no-repeat 0 55%/0% 78%;
+    transition:background-size .95s cubic-bezier(.55,.06,.25,1)}
+  mark.hl.on{background-size:100% 78%}
+  .hl-b{--c:var(--hl2)}
+  #hud{position:fixed;right:22px;bottom:18px;font:13px Menlo,monospace;background:rgba(255,255,255,.9);border:1px solid #d5d5d5;border-radius:8px;padding:8px 14px}
+  body.nohud #hud{display:none}
+  /* 导出模式：全部过渡关掉，高亮宽度由 JS 直接写内联样式 */
+  body.export mark.hl{transition:none}
+</style></head>
+<body>
+<div id="viewport">
+  <div id="brandbar">BRAND</div>
+  <div id="doc">
+    <div class="sheet" id="top"><p class="body" style="font-size:46px;font-weight:700">标题段落（0–2s 停留）</p></div>
+    <div class="sheet" id="p1"><p class="body">第一处核心信息：<mark class="hl" data-g="a1">被标记的原始句子</mark>。</p></div>
+    <div class="sheet" id="p2"><p class="body">第二处核心信息：<mark class="hl hl-b" data-g="b1">结果／终止句</mark>。</p></div>
+  </div>
+</div>
+<div id="hud"><span id="tc">0.00 / 11.00 s</span> · 空格暂停 · R 重播 · H 隐藏</div>
+<script>
+(function(){
+  const DUR = 11.0;                             // 总时长＝台词时长
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const doc = $('#doc'), vh = () => window.innerHeight;
+
+  // 关键帧表：时刻(秒) → 锚点 + 对齐；段内 smoothstep，禁止出现完全静止段
+  // 目标句在文档首屏时：开头段 y 保持 0 不滚，原位浮出即可
+  const stops = [
+    {t:0.0, el:'#top', align:'top'},
+    {t:2.0, el:'#top', align:'top'},
+    {t:3.2, el:'#p1',  align:'center'},
+    {t:5.0, el:'#p1',  align:'center'},
+    {t:5.9, el:'#p2',  align:'center'},
+    {t:DUR, el:'#p2',  align:'center'},
+  ];
+  // 高亮时间表：同一支笔顺序扫＝时间严格递增；分组必须在页面上有对应 data-g
+  const cues = [{t:0.35,g:'title'},{t:3.25,g:'a1'},{t:6.60,g:'b1'}];
+
+  const groups = {};
+  $$('[data-g]').forEach(el => (groups[el.dataset.g] ||= []).push(el));
+  cues.forEach(c => { if(!groups[c.g]) console.warn('cue 无对应元素(会静默空转):', c.g); });
+
+  const ease = x => x*x*(3-2*x);
+  function yFor(st){
+    const el = $(st.el);
+    return st.align === 'top' ? Math.max(0, el.offsetTop - 46)
+                             : el.offsetTop - (vh() - el.offsetHeight)/2;
+  }
+  const STAMP = 0.95;                            // 单条高亮的填充时长，与 CSS 一致
+
+  // 纯函数：给定 t 决定滚动位移、推近、高亮进度
+  function apply(t, exportMode){
+    let y = 0;
+    for(let i=0;i<stops.length-1;i++){
+      const a=stops[i], b=stops[i+1];
+      if(t>=b.t) continue;
+      const k=(t-a.t)/Math.max(1e-6,b.t-a.t);
+      y = yFor(a) + (yFor(b)-yFor(a))*ease(Math.min(1,Math.max(0,k)));
+      break;
+    }
+    if(t>=DUR) y = yFor(stops[stops.length-1]);
+    const z = 1 + 0.035*(t/DUR);                 // 全程微推近 → 零静止帧
+    doc.style.transformOrigin = `50% ${y + vh()/2}px`;
+    doc.style.transform = `translateY(${-y}px) scale(${z})`;
+
+    cues.forEach(c=>{
+      const p = Math.min(1, Math.max(0, (t - c.t)/STAMP));
+      (groups[c.g]||[]).forEach(el=>{
+        if(exportMode) el.style.backgroundSize = (p*100)+'% 78%';   // 导出：直接定值
+        else { el.classList.toggle('on', p>0); el.style.backgroundSize=''; }
+      });
+    });
+    $('#tc').textContent = t.toFixed(2)+' / '+DUR.toFixed(2)+' s';
+  }
+
+  const EXPORT = /[?&]export=1/.test(location.search);
+  if(EXPORT) document.body.classList.add('export');
+  window.__seek = t => { window.__pause(); apply(Math.max(0,Math.min(DUR,t)), EXPORT); };  // 截帧用
+  window.__pause = () => { playing = false; };
+
+  let t0=null, playing=false;
+  function frame(now){
+    if(!playing) return;
+    if(t0===null) t0=now;
+    const t=Math.min(DUR,(now-t0)/1000);
+    apply(t, EXPORT);
+    if(t>=DUR){ playing=false; return; }
+    requestAnimationFrame(frame);
+  }
+  window.__play = () => { t0=null; playing=true; requestAnimationFrame(frame); };
+
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space'){e.preventDefault(); playing?window.__pause():window.__play();}
+    else if(e.key==='r'||e.key==='R') window.__play();
+    else if(e.key==='h'||e.key==='H') document.body.classList.toggle('nohud');
+  });
+
+  // #t=秒 → 直接跳到该时刻并停住（同时隐藏 HUD，避免时间码进画面）
+  const m = location.hash.match(/t=([\d.]+)/);
+  if(m){ document.body.classList.add('nohud'); window.__seek(parseFloat(m[1])); }
+  else { apply(0, EXPORT); setTimeout(window.__play, 900); }
+})();
+</script></body></html>

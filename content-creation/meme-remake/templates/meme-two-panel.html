@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!--
+  上下两格对比梗图模板。替换占位符：
+  {{TOP_TITLE}} {{TOP_WORD}}
+  {{BOTTOM_TITLE}} {{BOTTOM_WORD}}
+  {{BOOK_1}}..{{BOOK_4}}  四本小书封的书名，**自己写 <br> 断行 + 带书名号**，不要靠 word-break
+  环绕词 TOP_WORD / BOTTOM_WORD 各 4 个字最稳（上格乱、下格整）。
+  书封字体：把 ~/Library/Fonts/SourceHanSerifSC-Heavy.otf 拷到同目录 fonts/ 下。
+  并排四本 134×178 时书名字号上限 19–20px（内宽 ÷ 最长行字数）；要更大只能缩人 / 改 2×2 / 缩标题。
+  渲染：python3 scripts/render_meme.py meme.html out.png --w 960 --h 1280 --scale 2 --ratio 0.75
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:960px; height:1280px; overflow:hidden; background:#fff; }
+  body { font-family:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Heiti SC",sans-serif; color:#111; }
+  .page { width:960px; height:1280px; display:flex; flex-direction:column; position:relative; }
+  .cell { height:640px; position:relative; display:flex; }
+  /* 小人容器：改这里的 px 宽度可给右侧书封让空间，viewBox 等比缩放不会裁切 */
+  .figure { width:400px; height:640px; display:block; flex:none; }
+  .side { flex:1; position:relative; display:flex; flex-direction:column; justify-content:center; padding-right:9px; }
+  .side.lean-up { transform: translateY(-44px); }
+  .side h2 { font-size:46px; font-weight:800; letter-spacing:.5px; line-height:1.25; white-space:nowrap; }
+  /* 小书封：只放书名 + 书名号，不加装饰线。字号上限 = 内宽 ÷ 最长行字数（含书名号） */
+  @font-face { font-family:'SHSong'; src:url('fonts/SourceHanSerifSC-Heavy.otf') format('opentype'); font-weight:900; }
+  .shelf { display:flex; gap:4px; margin-top:26px; }
+  .book { width:134px; height:178px; flex:none; background:#fff; border:1px solid #E1E6EA;
+          box-shadow:0 2px 9px rgba(16,42,67,.07); display:flex; align-items:center;
+          justify-content:center; padding:10px 7px; text-align:center; }
+  .book span { font-family:'SHSong',"Songti SC",serif; font-weight:900; font-size:19px;
+               line-height:1.5; letter-spacing:-.2px; color:#0E2437; white-space:nowrap; }
+  .divider { position:absolute; left:0; top:640px; width:960px; height:2px; background:#cfcfcf; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cell">
+    <svg class="figure" viewBox="0 0 520 640" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="hand" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3.6" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <g id="spiralTop"></g>
+      <!-- halo 层：同路径白色粗线画在黑线之前，把环绕文字推离线条 -->
+      <g filter="url(#hand)" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-2 250 420)">
+        <ellipse cx="250" cy="240" rx="84" ry="96"/>
+        <path d="M250 336 L250 354"/>
+        <path d="M126 396 Q170 358 250 358 Q330 358 374 396"/>
+        <path d="M126 396 Q113 476 109 566"/>
+        <path d="M374 396 Q387 476 391 566"/>
+        <path d="M126 396 Q70 322 94 252 Q106 198 138 168"/>
+        <path d="M138 168 q-15 -11 -21 -25"/>
+        <path d="M147 157 q-9 -15 -11 -28"/>
+        <path d="M151 176 q-13 -5 -21 -14"/>
+        <path d="M374 396 Q430 322 406 252 Q394 198 362 168"/>
+        <path d="M362 168 q15 -11 21 -25"/>
+        <path d="M353 157 q9 -15 11 -28"/>
+        <path d="M349 176 q13 -5 21 -14"/>
+      </g>
+      <!-- 上格姿态：双手抓头（崩溃） -->
+      <g filter="url(#hand)" fill="none" stroke="#111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-2 250 420)">
+        <ellipse cx="250" cy="240" rx="84" ry="96"/>
+        <path d="M250 336 L250 354"/>
+        <path d="M126 396 Q170 358 250 358 Q330 358 374 396"/>
+        <path d="M126 396 Q113 476 109 566"/>
+        <path d="M374 396 Q387 476 391 566"/>
+        <path d="M126 396 Q70 322 94 252 Q106 198 138 168"/>
+        <path d="M138 168 q-15 -11 -21 -25"/>
+        <path d="M147 157 q-9 -15 -11 -28"/>
+        <path d="M151 176 q-13 -5 -21 -14"/>
+        <path d="M374 396 Q430 322 406 252 Q394 198 362 168"/>
+        <path d="M362 168 q15 -11 21 -25"/>
+        <path d="M353 157 q9 -15 11 -28"/>
+        <path d="M349 176 q13 -5 21 -14"/>
+      </g>
+    </svg>
+    <div class="side lean-up">
+      <h2>{{TOP_TITLE}}</h2>
+      <!-- 书封组装在下格；上格只留标题 -->
+    </div>
+  </div>
+
+  <div class="cell">
+    <svg class="figure" viewBox="0 0 520 640" xmlns="http://www.w3.org/2000/svg">
+      <g id="ringsBottom"></g>
+      <g filter="url(#hand)" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="250" cy="240" rx="84" ry="96"/>
+        <path d="M250 336 L250 354"/>
+        <path d="M126 396 Q170 358 250 358 Q330 358 374 396"/>
+        <path d="M126 396 Q113 476 109 566"/>
+        <path d="M374 396 Q387 476 391 566"/>
+        <path d="M126 396 Q100 474 114 544"/>
+        <path d="M114 544 q-15 10 -8 23"/>
+        <path d="M123 551 q-10 12 -3 24"/>
+        <path d="M374 396 Q436 344 458 296"/>
+        <path d="M440 306 Q458 317 477 304"/>
+        <path d="M458 296 L436 234"/>
+        <path d="M458 296 L478 232"/>
+      </g>
+      <!-- 下格姿态：比耶（踏实） -->
+      <g filter="url(#hand)" fill="none" stroke="#111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="250" cy="240" rx="84" ry="96"/>
+        <path d="M250 336 L250 354"/>
+        <path d="M126 396 Q170 358 250 358 Q330 358 374 396"/>
+        <path d="M126 396 Q113 476 109 566"/>
+        <path d="M374 396 Q387 476 391 566"/>
+        <path d="M126 396 Q100 474 114 544"/>
+        <path d="M114 544 q-15 10 -8 23"/>
+        <path d="M123 551 q-10 12 -3 24"/>
+        <path d="M374 396 Q436 344 458 296"/>
+        <path d="M440 306 Q458 317 477 304"/>
+        <path d="M458 296 L436 234"/>
+        <path d="M458 296 L478 232"/>
+      </g>
+    </svg>
+    <div class="side">
+      <h2>{{BOTTOM_TITLE}}</h2>
+      <div class="shelf">
+        <div class="book"><span>{{BOOK_1}}</span></div>
+        <div class="book"><span>{{BOOK_2}}</span></div>
+        <div class="book"><span>{{BOOK_3}}</span></div>
+        <div class="book"><span>{{BOOK_4}}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+</div>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const TOP_WORD = "{{TOP_WORD}}".split("");
+const BOTTOM_WORD = "{{BOTTOM_WORD}}".split("");
+
+function txt(g, x, y, deg, s, size, opacity) {
+  const t = document.createElementNS(NS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y);
+  t.setAttribute("transform", `rotate(${deg} ${x} ${y})`);
+  t.setAttribute("font-size", size); t.setAttribute("fill", "#111");
+  t.setAttribute("opacity", opacity);
+  t.setAttribute("text-anchor", "middle");
+  t.setAttribute("dominant-baseline", "middle");
+  t.setAttribute("font-family", '"PingFang SC","Hiragino Sans GB",sans-serif');
+  t.textContent = s; g.appendChild(t);
+}
+
+/* 上格：混乱螺旋（半径与角速度都加正弦扰动） */
+(function () {
+  const g = document.getElementById("spiralTop");
+  const cx = 250, cy = 238, squash = 0.74, RMAX = 240;
+  const arms = [
+    { a0: 0.4, r0: 106, dr: 1.75, n: 64 },
+    { a0: 2.5, r0: 104, dr: 1.55, n: 58 },
+    { a0: 4.5, r0: 108, dr: 1.40, n: 54 }
+  ];
+  let id = 0;
+  arms.forEach(arm => {
+    let th = arm.a0, r = arm.r0;
+    for (let i = 0; i < arm.n; i++) {
+      const rr = Math.min(r, RMAX);
+      const x = cx + rr * Math.cos(th) * 0.96;
+      const y = cy + rr * Math.sin(th) * squash;
+      const deg = (th * 180 / Math.PI) + 90 + Math.sin(i * 0.9) * 26;
+      const fade = 1 - Math.min(0.5, (i / arm.n) * 0.5);
+      txt(g, x, y, deg, TOP_WORD[id++ % TOP_WORD.length], 13, (0.42 + 0.38 * fade).toFixed(2));
+      th += (14.5 / Math.max(r, 26)) * (1 + 0.75 * Math.sin(i * 0.7 + arm.a0));
+      r += arm.dr * (1 + 0.55 * Math.sin(i * 1.31 + arm.a0));
+    }
+  });
+})();
+
+/* 下格：规整同心圆（零扰动） */
+(function () {
+  const g = document.getElementById("ringsBottom");
+  const cx = 250, cy = 238, squash = 0.74;
+  const rings = [
+    { r: 54,  size: 12, n: 12, op: 0.8  },
+    { r: 116, size: 13, n: 30, op: 0.88 },
+    { r: 148, size: 13, n: 40, op: 0.86 },
+    { r: 176, size: 13, n: 49, op: 0.84 },
+    { r: 204, size: 13, n: 56, op: 0.76 },
+    { r: 232, size: 13, n: 62, op: 0.58 }
+  ];
+  let id = 0;
+  rings.forEach(ring => {
+    for (let i = 0; i < ring.n; i++) {
+      const th = (i / ring.n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + ring.r * Math.cos(th);
+      const y = cy + ring.r * Math.sin(th) * squash;
+      txt(g, x, y, th * 180 / Math.PI + 90, BOTTOM_WORD[id++ % BOTTOM_WORD.length], ring.size, ring.op);
+    }
+  });
+})();
+</script>
+</body>
+</html>

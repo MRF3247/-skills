@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.CHANGE-ME.watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/ABSOLUTE/PATH/TO/PROJECT/watchdog.sh</string>
+  </array>
+  <key>WorkingDirectory</key><string>/ABSOLUTE/PATH/TO/PROJECT</string>
+  <!-- 守护自己拉起的服务必须活过本次任务，否则等于没守护 -->
+  <key>AbandonProcessGroup</key><true/>
+  <key>StartInterval</key><integer>300</integer>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/ABSOLUTE/PATH/TO/PROJECT/.logs/watchdog.out.log</string>
+  <key>StandardErrorPath</key><string>/ABSOLUTE/PATH/TO/PROJECT/.logs/watchdog.err.log</string>
+</dict>
+</plist>

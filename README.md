@@ -11,6 +11,12 @@
 | [scilink-topic](scilink-topic/SKILL.md) | 医学选题挖掘：多源直抓 → 选题判定 → 链接/日期/DOI 三核 → 入飞书物料库 | 1.5.0 |
 | [scilink-ops](scilink-ops/SKILL.md) | SciLink 运营综合：发布登记、周数据填表、看板核对 | 1.1.0 |
 
+## 其他自建技能
+
+除上面 4 个主力技能外，还有 **约 100 个**自建/改造技能（内容生产、飞书、抓取、Hermes 配置、占星工作台等），按用途分组见 **[INDEX.md](INDEX.md)**。
+
+> 本仓库只收**文本骨架**（`SKILL.md` + `scripts/` + `templates/` + `references/`），不收图片/PSD/字体/Excel 等素材与任何凭据文件；需要素材时从本机资源库取或按 SKILL.md 里的说明重新生成。
+
 ## prompt
 
 - [MinerU_OCR流程Prompt.md](MinerU_OCR流程Prompt.md)

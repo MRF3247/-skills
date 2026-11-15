@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ============ 小红书医学科研海报模板 v2 ============
+     3:4 竖版 1242×1656，@2x 输出
+     风格 A 矢量扁平现代插画（青绿薄荷+深藏青+暖黄，斯坦福医学海报调性）
+     风格 B 现代极简 / 包豪斯几何（黑白+红点缀，网格制图语言）
+     风格 C 点彩 / 半色调网点（米白纸底+墨色+朱红，科普杂志感）
+     多页用 <!-- ==== N 标题 ==== --> 注释分页，render_posters.sh 按此拆分。
+  */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size: 1242px 1656px; margin:0; }
+  body { width:1242px; height:1656px; font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; position:relative; overflow:hidden; }
+
+  .page { width:1242px; height:1656px; position:relative; padding:96px 92px; display:flex; flex-direction:column; }
+  .content { position:relative; z-index:1; display:flex; flex-direction:column; flex:1; }
+
+  /* ---------- 风格 A：矢量扁平 / 医学编辑 ---------- */
+  .style-a { background:#0E4C4C; color:#FFFFFF; }
+  .style-a .kicker { font-size:32px; letter-spacing:8px; color:#7FD6C8; font-weight:600; margin-bottom:32px; }
+  .style-a .title { font-size:76px; font-weight:900; line-height:1.3; margin-bottom:28px; letter-spacing:1px; }
+  .style-a .title .hl { color:#FFD166; }
+  .style-a .divider { width:120px; height:10px; background:#FFD166; border-radius:5px; margin-bottom:46px; }
+  .style-a .body { font-size:42px; line-height:1.75; color:#E8F5F2; font-weight:400; }
+  .style-a .body b { color:#FFD166; font-weight:800; }
+  .style-a .step-tag { position:absolute; top:96px; right:92px; font-size:28px; color:#7FD6C8; border:3px solid #7FD6C8; padding:12px 26px; border-radius:60px; letter-spacing:4px; }
+  .style-a .foot { margin-top:auto; font-size:28px; color:#7FD6C8; letter-spacing:3px; }
+  .style-a .card { background:rgba(255,255,255,0.09); border-left:12px solid #7FD6C8; padding:30px 36px; margin-top:38px; border-radius:0 16px 16px 0; }
+  .style-a .card .lbl { font-size:34px; font-weight:800; color:#FFD166; margin-bottom:12px; }
+  .style-a .card .txt { font-size:38px; line-height:1.7; color:#E8F5F2; }
+  /* 医学装饰：右侧 DNA 螺旋（opacity 低，避免压卡片文字） */
+  .style-a .dna { position:absolute; right:40px; top:380px; width:200px; height:900px; opacity:0.14; z-index:0; }
+
+  /* ---------- 风格 B：现代极简 / 包豪斯几何 ---------- */
+  .style-b { background:#F5F3EE; color:#111111; }
+  .style-b .kicker { font-size:32px; letter-spacing:8px; color:#C7000B; font-weight:700; margin-bottom:32px; }
+  .style-b .title { font-size:72px; font-weight:900; line-height:1.32; margin-bottom:26px; letter-spacing:1px; }
+  .style-b .divider { width:100%; height:6px; background:#111111; margin-top:18px; margin-bottom:44px; } /* 文档流元素+margin，勿 absolute 否则压标题 */
+  .style-b .gridline { position:absolute; top:0; bottom:0; width:3px; background:rgba(17,17,17,0.10); }
+  .style-b .body { font-size:42px; line-height:1.75; color:#222; font-weight:400; }
+  .style-b .body b { color:#C7000B; font-weight:800; }
+  .style-b .step-tag { font-size:28px; color:#111; border:3px solid #111; padding:12px 26px; letter-spacing:4px; display:inline-block; margin-bottom:28px; }
+  .style-b .foot { margin-top:auto; font-size:28px; color:#666; letter-spacing:3px; }
+  .style-b .card { background:#FFFFFF; border:3px solid #111; padding:28px 34px; margin-top:36px; box-shadow:8px 8px 0 rgba(17,17,17,0.85); } /* 阴影偏移 ≤8px */
+  .style-b .card .lbl { font-size:32px; font-weight:800; color:#C7000B; margin-bottom:12px; }
+  .style-b .card .txt { font-size:36px; line-height:1.7; color:#222; }
+
+  /* ---------- 风格 C：点彩 / 半色调 ---------- */
+  .style-c { background:#F7F1E3; color:#1A1A1A; }
+  .style-c .kicker { font-size:32px; letter-spacing:8px; color:#9B2C2C; font-weight:700; margin-bottom:32px; }
+  .style-c .title { font-size:74px; font-weight:900; line-height:1.3; margin-bottom:26px; letter-spacing:1px; }
+  .style-c .divider { width:150px; height:8px; background:#9B2C2C; margin-bottom:44px; }
+  .style-c .body { font-size:42px; line-height:1.75; color:#2A2A2A; }
+  .style-c .body b { color:#9B2C2C; font-weight:800; }
+  .style-c .step-tag { font-size:28px; color:#F7F1E3; background:#9B2C2C; padding:12px 26px; border-radius:4px; letter-spacing:4px; display:inline-block; margin-bottom:28px; }
+  .style-c .foot { margin-top:auto; font-size:28px; color:#7A6E58; letter-spacing:3px; }
+  .style-c .card { background:rgba(255,255,255,0.65); border:3px solid #9B2C2C; padding:28px 34px; margin-top:36px; border-radius:8px; }
+  .style-c .card .lbl { font-size:32px; font-weight:800; color:#9B2C2C; margin-bottom:12px; }
+  .style-c .card .txt { font-size:36px; line-height:1.7; color:#2A2A2A; }
+  .style-c .dots { position:absolute; width:1242px; height:1656px; top:0; left:0; background-image:radial-gradient(circle, rgba(155,44,44,0.22) 3px, transparent 3px); background-size:34px 34px; z-index:0; }
+</style>
+</head>
+<body>
+<!-- ================= 01 封面 ================= -->
+<div class="page style-a">
+  <svg class="dna" viewBox="0 0 220 900" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="#7FD6C8" stroke-width="6">
+      <path d="M30,0 C130,75 130,150 30,225 C-70,300 -70,375 30,450 C130,525 130,600 30,675 C-70,750 -70,825 30,900"/>
+      <path d="M190,0 C90,75 90,150 190,225 C290,300 290,375 190,450 C90,525 90,600 190,675 C290,750 290,825 190,900"/>
+    </g>
+    <g fill="#FFD166">
+      <circle cx="30" cy="75" r="14"/><circle cx="190" cy="150" r="14"/><circle cx="30" cy="300" r="14"/><circle cx="190" cy="375" r="14"/><circle cx="30" cy="525" r="14"/><circle cx="190" cy="600" r="14"/><circle cx="30" cy="750" r="14"/><circle cx="190" cy="825" r="14"/>
+    </g>
+    <g fill="#7FD6C8">
+      <circle cx="190" cy="75" r="14"/><circle cx="30" cy="150" r="14"/><circle cx="190" cy="300" r="14"/><circle cx="30" cy="375" r="14"/><circle cx="190" cy="525" r="14"/><circle cx="30" cy="600" r="14"/><circle cx="190" cy="750" r="14"/><circle cx="30" cy="825" r="14"/>
+    </g>
+    <g fill="none" stroke="#FFD166" stroke-width="4">
+      <line x1="30" y1="75" x2="190" y2="75"/><line x1="30" y1="150" x2="190" y2="150"/><line x1="30" y1="300" x2="190" y2="300"/><line x1="30" y1="375" x2="190" y2="375"/><line x1="30" y1="525" x2="190" y2="525"/><line x1="30" y1="600" x2="190" y2="600"/><line x1="30" y1="750" x2="190" y2="750"/><line x1="30" y1="825" x2="190" y2="825"/>
+    </g>
+  </svg>
+  <div class="content">
+    <div class="kicker">科研人 · 文献检索方法论</div>
+    <div class="title">找经典文献<br><span class="hl">不用瞎翻</span></div>
+    <div class="divider"></div>
+    <div class="body">从「开山之作」到「最新热点」<br>一套 <b>5 步检索法</b>，把文献找全、找透</div>
+    <div class="card">
+      <div class="lbl">5 步路线</div>
+      <div class="txt">① 锁定奠基性核心文献<br>② 顺藤摸瓜找同团队研究<br>③ 用综述补全领域脉络<br>④ 反向追踪引用经典的新研究<br>⑤ 交叉验证补漏</div>
+    </div>
+    <div class="card"><div class="lbl">适合谁</div><div class="txt">医学生 / 研究生 / 青年科研工作者，写综述、开题、找方向都用得上</div></div>
+    <div class="foot">#医学文献 #科研干货 #论文检索</div>
+  </div>
+</div>
+
+<!-- ================= 02 方法卡 ================= -->
+<div class="page style-b">
+  <div class="gridline" style="left:33.3%;"></div>
+  <div class="gridline" style="left:66.6%;"></div>
+  <div class="content">
+    <div class="step-tag">STEP 01</div>
+    <div class="kicker">第一步 · 锁定领域</div>
+    <div class="title">「奠基性核心文献」</div>
+    <div class="divider"></div>
+    <div class="body">不要上来就搜最新研究，<br>先找领域的<b>「开山之作」</b></div>
+    <div class="card"><div class="lbl">操作方法</div><div class="txt">用 Web of Science / 知网搜关键词，<b>按被引频次从高到低排序</b></div></div>
+    <div class="card"><div class="lbl">为什么</div><div class="txt">前 10 篇基本都是公认经典，哪怕 10 年前也一定要读——是整个领域的研究基础</div></div>
+    <div class="card"><div class="lbl">重点看</div><div class="txt">研究问题、核心结论、局限性。后面 90% 的研究都在这个框架上延伸</div></div>
+    <div class="foot">找经典文献不用瞎翻 · 第 1/5 步</div>
+  </div>
+</div>
+
+<!-- ================= 03 方法卡（点彩） ================= -->
+<div class="page style-c">
+  <div class="dots"></div>
+  <div class="content">
+    <div class="step-tag">STEP 02</div>
+    <div class="kicker">第二步 · 顺藤摸瓜</div>
+    <div class="title">找「同团队延续性研究」</div>
+    <div class="divider"></div>
+    <div class="body">大牛团队的研究都是<b>成体系</b>的，<br>找到一篇经典，就能牵出整条研究线</div>
+    <div class="card"><div class="lbl">操作方法</div><div class="txt">① 找高被引文献的<b>通讯作者</b><br>② 去 Google Scholar / ResearchGate 搜其研究 timeline</div></div>
+    <div class="card"><div class="lbl">收益</div><div class="txt">从机制探索 → 临床验证 → 转化研究，逻辑链条直接理清，比零散找文献<b>效率高 10 倍</b></div></div>
+    <div class="foot">找经典文献不用瞎翻 · 第 2/5 步</div>
+  </div>
+</div>
+</body>
+</html>

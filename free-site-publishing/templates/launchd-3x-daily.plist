@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 每天 9:00 / 12:00 / 15:00 跑一次快照脚本。改 Label、脚本路径、工作目录即可。
+     装：cp 到 ~/Library/LaunchAgents/ 后 launchctl load -w ~/Library/LaunchAgents/<label>.plist
+     改：先 launchctl unload，再 load。日志写文件，别指望它输出到终端。 -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.site.snapshot</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/absolute/path/to/snapshot.sh</string>
+  </array>
+  <key>WorkingDirectory</key><string>/absolute/path/to/repo</string>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/absolute/path/to/repo/.publish/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>/absolute/path/to/repo/.publish/launchd.err.log</string>
+</dict>
+</plist>
