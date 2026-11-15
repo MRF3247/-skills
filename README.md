@@ -6,9 +6,10 @@
 
 | 技能 | 干什么 | 版本 |
 |---|---|---|
-| [scilink-xhs-writing](scilink-xhs-writing/SKILL.md) | 小红书图文成稿：dbs 定结构和标题 → Kimi 写成稿 → 脚本机检字数/tag/AI 句式 → 事实核对 → 落盘（可选写回飞书） | 1.0.0 |
-| [scilink-ref-style-poster](scilink-ref-style-poster/SKILL.md) | 刀客轻研标准 3:4 小红书封面出图：内置参考图、PSD 模板、色板校验脚本 | 2.1.0 |
-| [scilink-medical-topic-scout](scilink-medical-topic-scout/SKILL.md) | 医学选题挖掘：多源直抓 → 选题判定 → 链接/日期/DOI 三核 → 入飞书物料库 | 1.0.0 |
+| [scilink-writing](scilink-writing/SKILL.md) | 小红书图文成稿（对外名 SciLink-writing）：dbs 定结构和标题 → Kimi 写成稿 → 脚本机检字数/tag/AI 句式 → 事实核对 → 落盘（可选写回飞书） | 1.9.0 |
+| [scilink-pic](scilink-pic/SKILL.md) | 刀客轻研视觉物料（对外名 SciLink-pic）：插画封面／论文速读卡／新闻速读卡／P2-P3 截图／实拍压字／政策速读 | 4.15.0 |
+| [scilink-topic](scilink-topic/SKILL.md) | 医学选题挖掘：多源直抓 → 选题判定 → 链接/日期/DOI 三核 → 入飞书物料库 | 1.5.0 |
+| [scilink-ops](scilink-ops/SKILL.md) | SciLink 运营综合：发布登记、周数据填表、看板核对 | 1.1.0 |
 
 ## prompt
 
@@ -24,21 +25,21 @@
 
 ```bash
 git clone https://github.com/MRF3247/-skills.git /tmp/skills
-cp -r /tmp/skills/scilink-xhs-writing ~/.hermes/skills/
+cp -r /tmp/skills/scilink-writing ~/.hermes/skills/
 ```
 
 **给别的 AI 读**（Claude Code / Codex / Kimi 都行）：把 raw 链接直接丢过去，例如
 
 ```
-https://raw.githubusercontent.com/MRF3247/-skills/main/scilink-xhs-writing/SKILL.md
+https://raw.githubusercontent.com/MRF3247/-skills/main/scilink-writing/SKILL.md
 ```
 
 **单独跑脚本**（不必装技能）：
 
 ```bash
-python3 scilink-xhs-writing/scripts/xhs_check.py draft.md --title "标题"
+python3 scilink-writing/scripts/xhs_check.py draft.md --title "标题"
 ```
 
 ## 依赖
 
-`scilink-xhs-writing` 的完整流程依赖 dbs 系技能（`dbs`、`dbs-content`、`dbs-xhs-title`、`dbs-ai-check`、`dbs-content-risk-check`）和 `KIMI_API_KEY`；两个脚本（字数/tag/黑名单机检、Kimi 写稿）可以脱离技能单独使用。具体依赖写在各自 SKILL.md 的「前置」一节。
+`scilink-writing` 的完整流程依赖 dbs 系技能（`dbs`、`dbs-content`、`dbs-xhs-title`、`dbs-ai-check`、`dbs-content-risk-check`）和 `KIMI_API_KEY`；`scilink-pic` 依赖 `playwright`（截图）与 matplotlib（图表）；两个脚本（字数/tag/黑名单机检、Kimi 写稿）可以脱离技能单独使用。具体依赖写在各自 SKILL.md 的「前置」一节。
