@@ -1,7 +1,7 @@
 ---
 name: scilink-pic
 description: Use when 生成刀客轻研视觉物料：插画封面／论文速读／P2-P3 截图／实拍压字／政策速读（材料截图版）。
-version: 4.15.0
+version: 4.15.1
 author: Hermes Agent
 license: MIT
 metadata:
@@ -104,7 +104,7 @@ metadata:
 **做法与坑**
 - 每页 `.sheet` 固定 `width:1080px;height:1440px;overflow:hidden`，页面堆叠后 `--window-size=1080,1440*N` 一次截图，再按 `i*2880` 裁单页（2x）。别一页一个 HTML，也别靠自动分页。
 - 分页**手排**（字段少、每页两块），写死 `margin-top` 比靠高度计算稳；**全文版不适用手排**，改走 `references/paper-fulltext-card.md` 的段落级自动分页。
-- `templates/paper_read_card.html` 里的 logo 仍写着旧路径 `scilink-ref-style-poster/assets/logo.png`，复制模板时必须改成 `scilink-pic/assets/logo.png`——漏改的表现是整页没有 logo，而报错不会出现。
+- 模板里的 logo 一律走 `scilink-pic/assets/logo.png`（2026-11 已把 `lead_qr_card.html`／`poster_brand.html`／`policy_shot.html`／`paper_read_card.html` 里写死的旧目录名全部改掉）。复制模板或写新模板时**不要硬编码技能目录名**，也别写死 `scilink-ref-style-poster` 之类旧路径——漏改的表现是整页没有 logo，而报错不会出现。
 - 落文档：新增用两列 `<grid>` 追加，**不要替换已有图**；要替换旧版就把旧节的 `<h1>` 到文末整段切掉再拼（回写坑见 `references/paper-card-layout.md`），覆盖后回读 `imgs` 计数。
 
 ## 栏目 · 论文速读（老版：逐节中英对照三线表卡）
