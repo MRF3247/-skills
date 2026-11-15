@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """医学资讯多源直抓（不依赖 MedHOT / 每日医讯中间层）。
 
-两条腿：
+三条腿：
   1) EuropePMC REST（按 ISSN 拉最新期刊论文 + 预印本）——覆盖期刊正文，最稳
-  2) RSS/Atom（Nature/NEJM/Lancet/JAMA/FDA/CDC/WHO/预印本/行业媒体）——覆盖新闻与快报
+  2) RSS/Atom（Nature/NEJM/Lancet/JAMA/Cell/Science/WHO/CDC/行业媒体，22 个源）——覆盖新闻与快报
+     ⚠️ 预印本（bioRxiv/medRxiv）默认不抓：无同行评议、太前沿，不适合公号内容。`--with-preprint` 可临时恢复。
+  3) 中文官方源（NMPA 药品公告/动态、卫健委政策法规/解读、国自然通知）——国内政策与获批，
+     被 412/JS 挡的直接走 camofox
 
 用法：
   python3 fetch_all_sources.py --days 3 --out /tmp/news.json
   python3 fetch_all_sources.py --days 7 --only jr --out /tmp/jr.json      # 只走 EuropePMC
   python3 fetch_all_sources.py --days 3 --only rss --out /tmp/rss.json    # 只走 RSS
+  python3 fetch_all_sources.py --days 10 --only cn --out /tmp/cn.json     # 只走中文官方源
   python3 fetch_all_sources.py --days 3 --dept icu                        # 按科室过滤
 
-输出：[{source, kind, title, doi, url, published, abstract}] 按 published 降序，DOI/标题双重去重。
+输出：[{source, kind, title, doi, url, published, pub_basis, issue_date, abstract}]，按 published 降序，DOI/标题双重去重。
+     published 为空但 issue_date 有值的，是期刊给的“未来期次日”——不能当发布日期，需进页面核。
 """
-import argparse, json, re, sys, urllib.parse, urllib.request
+import argparse, html as htmlmod, json, re, sys, time, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -66,8 +71,6 @@ FEEDS = {
     "Science": ("https://www.science.org/rss/news_current.xml", "rss"),
     "WHO": ("https://www.who.int/rss-feeds/news-english.xml", "rss"),
     "CDC": ("https://tools.cdc.gov/api/v2/resources/media/316422.rss", "rss"),
-    "bioRxiv": ("https://connect.biorxiv.org/biorxiv_xml.php?subject=all", "preprint"),
-    "medRxiv": ("https://connect.medrxiv.org/medrxiv_xml.php?subject=all", "preprint"),
     "STAT": ("https://www.statnews.com/feed/", "news"),
     "BioPharma Dive": ("https://www.biopharmadive.com/feeds/news/", "news"),
     "Endpoints News": ("https://endpts.com/feed/", "news"),
@@ -76,6 +79,17 @@ FEEDS = {
     "NPR Health": ("https://feeds.npr.org/1128/rss.xml", "news"),
     "Healthcare Dive": ("https://www.healthcaredive.com/feeds/news/", "news"),
     "Health Affairs": ("https://www.healthaffairs.org/action/showFeed?type=etoc&feed=rss&jc=hlthaff", "journal"),
+    # ── 传播向专用源（2026-10-28 加：用户实测情绪/吃瓜类流量最好）──
+    "Retraction Watch": ("https://retractionwatch.com/feed/", "news"),
+    # PubPeer 官方无 RSS（/rss /feed 全 404，实测 2026-10-28）——需要时用 camofox 抓 https://pubpeer.com/
+}
+
+# ── 预印本源：默认**不抓**（2026-10-26 用户决定）。
+# 理由：预印本没有同行评议、结论常反转，太前沿，不适合做面向医生的公号内容。
+# 需要临时恢复时加 --with-preprint，别改这里。
+PREPRINT_FEEDS = {
+    "bioRxiv": ("https://connect.biorxiv.org/biorxiv_xml.php?subject=all", "preprint"),
+    "medRxiv": ("https://connect.medrxiv.org/medrxiv_xml.php?subject=all", "preprint"),
 }
 
 # 已知取不到（需浏览器兜底），脚本会跳过并提示
@@ -84,6 +98,23 @@ BLOCKED = {
     "FDA 新闻稿": "原 RSS 路径已 404 → 改抓 https://www.fda.gov/news-events/fda-newsroom（需 camofox）或 openFDA API",
     "Guardian Health": "国内网络直连超时（000）→ 需要时走代理",
 }
+
+# ── 中文官方源（国内政策 / 获批 / 基金口径，英文源一条都覆盖不到）
+# curl 直连成功率：NMPA 与卫健委列表页多为 412（WAF 要 cookie/JS），一律 curl 先试、失败落 camofox。
+CN_SITES = {
+    "NMPA药品公告": "https://www.nmpa.gov.cn/yaopin/ypggtg/index.html",
+    "NMPA药品动态": "https://www.nmpa.gov.cn/yaopin/ypjgdt/index.html",
+    "卫健委政策法规": "http://www.nhc.gov.cn/wjw/zcfg/list.shtml",
+    "卫健委工作通知": "http://www.nhc.gov.cn/wjw/gztz/list.shtml",
+    "卫健委征求意见": "http://www.nhc.gov.cn/wjw/zqyj/list.shtml",
+    "国自然通知公告": "https://www.nsfc.gov.cn/p1/2828/2831/tzgg11.html",
+}
+
+# 中文源里明确不要的噪声：时政通稿、领导活动、纯导航
+CN_DROP = ("习近平", "李强", "政治局", "新华社", "求是", "党中央", "常委会", "二十大", "全会",
+           "会见", "率团", "调研", "座谈", "看望", "出席会议")
+
+CAMOFOX = "http://127.0.0.1:9377"
 
 DEPT_KW = {
     "cardio": ["heart", "cardiac", "cardio", "coronary", "arrhythm", "atrial", "stroke", "hypertens", "atheroscle", "心", "冠", "房颤", "心衰", "血压", "动脉"],
@@ -141,7 +172,6 @@ def fetch_epmc(name, issn, cutoff, page_size=50):
 def _local(tag):
     return tag.split("}")[-1].lower() if isinstance(tag, str) else ""
 
-
 def fetch_feed(name, url, kind, cutoff):
     out = []
     try:
@@ -190,10 +220,119 @@ def fetch_feed(name, url, kind, cutoff):
     return out
 
 
+# ────────────────────────── 中文官方源 ──────────────────────────
+
+def _cf(path, payload, timeout=90, method="POST"):
+    """camofox REST 调用。POST /tabs 创建 tab 偶发 500（浏览器唤醒竞态），由调用方重试。"""
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(f"{CAMOFOX}{path}", data=data,
+                                 headers={"Content-Type": "application/json"}, method=method)
+    return json.loads(urllib.request.urlopen(req, timeout=timeout).read().decode())
+
+
+def camofox_html(url, warm="https://www.nmpa.gov.cn/", wait=6, uid="hermes-scout"):
+    """用 camofox 取真实渲染后的 outerHTML。
+
+    实测坑：① 直接用目标 URL 建 tab，目标返回 412 时 camofox 直接 500 → 先用 warm 页建 tab 再 navigate；
+    ② 建 tab 本身也会偶发 500 → 重试 3 次；③ 每条 URL 用完关 tab，否则 activeTabs 堆积后全部 400/500。
+    """
+    tab = None
+    for attempt in range(3):
+        try:
+            tab = _cf("/tabs", {"url": warm, "userId": uid, "sessionKey": f"cn{attempt}"})["tabId"]
+            break
+        except Exception:
+            time.sleep(3)
+    if not tab:
+        raise RuntimeError("camofox 建 tab 失败（检查 /health 的 browserRunning / activeTabs）")
+    try:
+        for _ in range(2):
+            try:
+                nav = _cf(f"/tabs/{tab}/navigate", {"userId": uid, "url": url})
+                if nav.get("navigationOk"):
+                    break
+            except Exception:
+                pass
+            time.sleep(3)
+        time.sleep(wait)
+        r = _cf(f"/tabs/{tab}/evaluate",
+                {"userId": uid, "expression": "document.documentElement.outerHTML"})
+        res = r.get("result")
+        return res if isinstance(res, str) else json.dumps(res)
+    finally:
+        try:
+            _cf(f"/tabs/{tab}?userId={uid}", None, timeout=20, method="DELETE")
+        except Exception:
+            pass
+
+
+def parse_cn(html_text, base):
+    """从中文政府站列表页抽 (标题, 绝对链接, 日期)。
+
+    政府站两种结构都覆盖：
+      A. <li><a href title>标题</a><span class="ml">2026-09-22</span></li>   （NMPA / 卫健委）
+      B. <a href><li>…<div class="item-right-content">标题</div>…<div class="date">2026-09-02</div></li></a>（国自然）
+    做法：按「日期」定位，往前找最近的 <a>，标题优先取 title 属性、否则取 <a> 之后到日期之间的纯文本。
+    """
+    out, seen = [], set()
+    for m in re.finditer(r"(20\d{2}-\d{2}-\d{2})", html_text):
+        tail = html_text[max(0, m.start() - 1500):m.start()]
+        am = None
+        for am in re.finditer(r"<a\b[^>]*>", tail):
+            pass
+        if am is None:
+            continue
+        atag = am.group(0)
+        hm = re.search(r'href="([^"]+)"', atag)
+        if not hm or hm.group(1).startswith(("javascript:", "#")):
+            continue
+        tm = re.search(r'title="([^"]+)"', atag)
+        if tm:
+            title = htmlmod.unescape(tm.group(1)).strip()
+        else:
+            title = re.sub(r"<[^>]+>", " ", tail[am.end():])
+            title = htmlmod.unescape(re.sub(r"\s+", " ", title)).strip()
+        title = re.sub(r"\s+", " ", title)
+        if len(title) < 8 or title in seen or any(k in title for k in CN_DROP):
+            continue
+        seen.add(title)
+        out.append((title, urllib.parse.urljoin(base, hm.group(1)), m.group(1)))
+    return out
+
+
+def fetch_cn(name, url, cutoff):
+    """中文源：curl 先试（快），非 200 或内容里没日期就落 camofox。"""
+    out, html_text, engine = [], "", "curl"
+    try:
+        raw = http_get(url, timeout=25).decode("utf-8", "ignore")
+        if len(raw) > 5000 and re.search(r"20\d{2}-\d{2}-\d{2}", raw):
+            html_text = raw
+    except Exception:
+        pass
+    if not html_text:
+        engine = "camofox"
+        try:
+            html_text = camofox_html(url, warm=urllib.parse.urlsplit(url)._replace(path="/").geturl())
+        except Exception as e:
+            print(f"  [CN FAIL] {name}: camofox 也拿不到 {e}", file=sys.stderr)
+            return out
+    for title, link, pub in parse_cn(html_text, url):
+        if pub < cutoff:
+            continue
+        out.append({"source": name, "kind": "cn_policy", "title": title, "doi": "",
+                    "url": link, "published": pub, "pub_basis": engine, "issue_date": "",
+                    "abstract": ""})
+    if not out:
+        print(f"  [CN EMPTY] {name}: 抓到页面但窗口内无条目（政府站节奏慢，试放大 --days）", file=sys.stderr)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=3, help="回看天数（按今天往前推）")
-    ap.add_argument("--only", choices=["all", "jr", "rss"], default="all")
+    ap.add_argument("--only", choices=["all", "jr", "rss", "cn"], default="all")
+    ap.add_argument("--with-preprint", action="store_true",
+                    help="临时恢复抓 bioRxiv/medRxiv（默认排除：无同行评议，不适合公号内容）")
     ap.add_argument("--dept", choices=list(DEPT_KW), help="按科室关键词过滤（cardio/resp/icu/anes/radio/onc）")
     ap.add_argument("--out", default="/tmp/medical_news.json")
     args = ap.parse_args()
@@ -208,15 +347,28 @@ def main():
     if args.only in ("all", "rss"):
         for name, (url, kind) in FEEDS.items():
             jobs.append(("rss", name, url))
+        if args.with_preprint:
+            for name, (url, kind) in PREPRINT_FEEDS.items():
+                jobs.append(("rss", name, url))
 
     results = []
     def work(job):
         typ, name, arg = job
-        return fetch_epmc(name, arg, cutoff) if typ == "epmc" else fetch_feed(name, arg, FEEDS[name][1], cutoff)
+        if typ == "epmc":
+            return fetch_epmc(name, arg, cutoff)
+        kind = (FEEDS.get(name) or PREPRINT_FEEDS.get(name) or (None, "news"))[1]
+        return fetch_feed(name, arg, kind, cutoff)
 
     with ThreadPoolExecutor(max_workers=6) as ex:
         for chunk in ex.map(work, jobs):
             results.extend(chunk)
+
+    # 中文源串行跑：camofox 并发多了会 400/500，且每条要等渲染
+    if args.only in ("all", "cn"):
+        for name, url in CN_SITES.items():
+            print(f"  [CN] {name} …", file=sys.stderr)
+            results.extend(fetch_cn(name, url, cutoff))
+            time.sleep(2)
 
     # 去重：DOI 优先，无 DOI 用规范化标题
     seen, dedup = set(), []

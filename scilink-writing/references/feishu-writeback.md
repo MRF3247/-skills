@@ -110,12 +110,39 @@ lark-cli base +record-batch-update --base-token <BASE> --table-id <TABLE> \
 
 **整表导出时 `--format ndjson` 不回记录**：它只回一份清单（`records_count`、`page_count`、`record_file` 字段指向的**另一个文件路径**），真正的记录在 `record_file` 里。直接解析 stdout 会拿到 `{manifest_version…}` 而误以为没数据。做法：先读 stdout 拿 `record_file`，再 `json.loads` 每行那个文件。要找某篇的 record_id，就用 `内容标题／DOI／原文链接` 在 `record_file` 里 grep，比 `record-search` 的 filter 语法省事。
 
+## 5c · 把附件 PDF 挂进文档（不要只贴链接）
+
+政策类稿要求「通知页上的附件也要放到这个文档里」时，用文件卡片：
+
+```bash
+lark-cli docs +media-insert --doc <docx token> --type file --file /tmp/nhc_pdf/a1.pdf --as user
+# 回 {"ok": true, "file_token": "…", "block_id": "…"}
+```
+
+**回读不能用 `<file>` 计数**：文件卡片在 XML 里不是 `<file>`，而是
+
+```xml
+<figure view-type="Card"><source name="1.胸外科专业医疗质量控制指标（2026年版）.pdf" mime="application/pdf" token="…"/></figure>
+```
+
+全文搜 `<file` 得 0，看着像没插进去。正确断言：
+
+```python
+re.findall(r'<source name="([^"]+)" mime="([^"]+)"', xml)   # 每个附件一条，name＝原文件名
+```
+
+**顺序固定：先 overwrite 正文，再 `media-insert` 挂附件。** 整篇覆盖只带 `<img>` 图片块，文件卡片不在 XML 表现里、覆盖即丢；反过来做等于白干。挂完再 `docs +fetch --doc-format markdown` 看文末是否出现 `.pdf` 文件名。
+
 ## 坑
 
-- **`drive +download` 拉文档里的内嵌图会 403**（`token lookup failed … code=981003`）：报错 hint 指向 `lark-cli drive +preview --file-token <TOKEN> --type source_file --output <path>`。只是想看旧图长什么样、而反正要重出时，别在下载上耗时间——直接从图片来源重拍（P2 重跑 `shot_p2p3.py`，封面重跑豆包）。
+- **`drive +download` 拉文档里的内嵌图会 403**（`token lookup failed … code=981003`），但**不等于拿不到图**：换 `lark-cli drive +preview --file-token <TOKEN> --type source_file --output /tmp/pics/<TOKEN>.bin --as user` 能拿到原始文件（后缀随便，再用 PIL/`file` 判真实格式）。任务本身要用到原图像素（给实拍照片压文案、取图入模板）时必须走这条；只有「反正要重出图」（重拍 P2、重生封面）时才跳过下载。
+- **拿内嵌图 token**：`docs +fetch --doc-format xml` 里的 `<img … src="<token>"/>`（不是文件名），三张图就是三个 token。
+- **每次覆盖写之前必须重新 `docs +fetch` 当前 XML**：不要拿几轮之前落的缓存 JSON 当底稿——会把中间已经改好的东西（脱敏、删药名、换图）整体回滚，而 overwrite 不会报错。写完立刻回读断言关键词（如 `药名计数=0`、`imgs=3`）。
 
 - **`block_replace` 会让被替换块的批注一并失效**。用户还在标注时不要边改边 replace：先本地改好，再一次性提交。
-- **别用 `--command overwrite`**：会清空文档里的 `<grid>` 配图和已有评论。
+- **`--command overwrite` 能保图，但保不住批注**：XML 里用 `<img path="@./x.png" caption="…"/>` **重新声明全部图片**时，整篇覆盖会把图重新上传并保留在 `<grid>` 里（实测四图文档覆盖后图数、顺序、说明都对）。所以真正的禁用条件是「文档有未解决批注」（会整批消失且不可恢复），不是「有配图」。覆盖前把当前 XML 里的 `<img>` 全量抄进新 XML，不要漏图。
+- **`base +record-batch-update` 只认 `--json`**：`--records`／`--records @file` 都不存在，会回 `unknown flag`。传的 JSON 形状是 `{"update_records":{"<rec_id>":{"<字段名或字段id>":值}}}`。
+- **`record-get` 回读有短暂延迟**：batch-update 回 `ok:true` 后立刻 `record-get` 可能仍返回旧值（实测隔一次调用才对）。拿到旧值先等 2–3 秒重读一次再判失败，不要据此重复写入。
 - 灰色小字用 `<span text-color="rgb(143,149,158)">`，与长文里「素材来源」同色。
 - 标题栏放「主标题 + 备选一行」便于用户挑；正文栏不放备选。
 - 插入空 `<p>` 会把段落挤散，写入时每个 `<p>` 都要有内容。

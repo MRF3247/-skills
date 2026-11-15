@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+资料合集引流海报（3:4 / 1080×1440）—— 已跑通的骨架。
+换稿只改三处：① h1 两行（利益在前、动作在后）② .list 里的 5 行（编号/书名/一句话说明）③ 二维码区文案。
+固定项不要动：右上品牌锁定、~3px 黑线、行式清单（不用胶囊/卖点卡）、二维码 352–400px、深蓝页脚。
+书名必须带书名号《》；字号放不下时按 PIL 实测最大可容纳值降，不要换行。
+渲染：--force-device-scale-factor=2 --window-size=1080,1440；验收跑 scripts/check_bottom_gap.py，内容底到页脚 45–90px。
+-->
+<html lang="zh-CN"><head><meta charset="utf-8"><style>
+@font-face{font-family:'MiSans';src:url('../../../assets/MiSans-Regular.ttf');font-weight:400}
+@font-face{font-family:'MiSans';src:url('/Users/Jin/Library/Fonts/MiSans-Medium.ttf');font-weight:500}
+@font-face{font-family:'MiSans';src:url('/Users/Jin/Library/Fonts/MiSans-Bold.ttf');font-weight:700}
+@font-face{font-family:'MiSans';src:url('/Users/Jin/Library/Fonts/MiSans-Heavy.ttf');font-weight:800}
+:root{--brand:#006EBB;--deep:#004E86;--ink:#16202B;--line:#DCE3EB;--wash:#EFF6FC}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;height:1440px;font-family:'MiSans',-apple-system,sans-serif;color:var(--ink);background:#fff}
+.page{width:1080px;height:1440px;position:relative;overflow:hidden;padding:52px 64px 0;background:#fff}
+.head{display:flex;justify-content:flex-end;align-items:center;gap:16px}
+.head img{height:40px;order:2}
+.badge{background:var(--brand);color:#fff;font-size:20px;font-weight:700;letter-spacing:1.4px;padding:9px 17px;border-radius:6px;order:1}
+h1{font-size:94px;line-height:1.22;font-weight:800;letter-spacing:-1px;margin-top:58px}
+h1 em{font-style:normal;color:var(--brand)}
+.sub{font-size:30px;color:#4A5563;margin-top:18px;font-weight:600}
+.rule{height:3px;background:var(--ink);margin-top:34px}
+.list{margin-top:22px}
+.row{display:flex;align-items:baseline;gap:14px;padding:22px 0;border-bottom:1px solid var(--line)}
+.row .n{flex:0 0 26px;font-size:19px;font-weight:800;color:var(--brand)}
+.row .t{font-size:29px;font-weight:750;letter-spacing:.2px}
+.row .d{font-size:18px;color:#6B7787;margin-left:auto;font-weight:500;white-space:nowrap}
+.qrzone{margin-top:36px;background:var(--wash);border-radius:20px;padding:30px 34px;display:flex;align-items:center;gap:30px}
+.qrbox{background:#fff;border-radius:12px;padding:12px;flex:0 0 auto}
+.qrbox img{width:362px;height:362px;display:block;border-radius:6px}
+.qrtext .t1{font-size:41px;font-weight:800;line-height:1.42}
+.qrtext .t1 span{color:var(--brand)}
+.qrtext .t2{font-size:21px;color:#4A5563;margin-top:12px;font-weight:600}
+.foot{position:absolute;left:0;right:0;bottom:0;height:62px;background:var(--deep);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 64px;font-size:19px;letter-spacing:1px}
+</style></head><body><div class="page">
+  <div class="head"><span class="badge">科研 AI 工作台</span><img src="../assets/logo.png"></div>
+  <h1>科研入门<em>全套资料</em><br>一次全部领走</h1>
+  <div class="sub">4 本系统教材 ＋ 开题报告模板包</div>
+  <div class="rule"></div>
+  <div class="list">
+    <div class="row"><span class="n">01</span><span class="t">《医学文献检索与阅读》</span><span class="d">从不知道查什么，到知道该信哪个</span></div>
+    <div class="row"><span class="n">02</span><span class="t">《放养硕博自救指南》</span><span class="d">从选题到投稿，十五个环节不漏</span></div>
+    <div class="row"><span class="n">03</span><span class="t">《临床研究全流程入门指南》</span><span class="d">从证据金字塔到统计结局</span></div>
+    <div class="row"><span class="n">04</span><span class="t">《0基础综述写作全流程指南》</span><span class="d">从读第一篇文献到投出第一篇稿</span></div>
+    <div class="row"><span class="n">05</span><span class="t">开题报告模板包</span><span class="d">10 套模板 · 硕博双版本 · Word 可编辑</span></div>
+  </div>
+  <div class="qrzone">
+    <div class="qrbox"><img src="file:///Users/Jin/Documents/素材/刀客轻研小助手二维码.jpg"></div>
+    <div class="qrtext">
+      <div class="t1">扫码添加<span>企微客服</span><br>全部资料免费领</div>
+      <div class="t2">PDF 全套 ＋ 10 套 Word 模板</div>
+    </div>
+  </div>
+  <div class="foot"><span>刀客轻研 · SciLink</span><span>医学前沿 · 科研动态 · 医务生活</span></div>
+</div></body></html>

@@ -1,0 +1,55 @@
+<!--
+引流封面 · 极简版（二维码海报）—— 1080×1440，只留标题 + 二维码 + 两行 CTA。
+什么时候用：用户说「简单一点」「下面的胶囊/方块都删掉」时。完整版看 lead_qr_card.html。
+换稿只改三处：
+  ① 主标两行（第二行是钩子，利益词用 <em> 变品牌蓝）
+  ② 二维码下方两行 CTA（t1，居中；需要时把「立领XX」换成实际权益）
+  ③ 页脚左右两句（左品牌名／右栏目口号）
+固定项不要动：二维码 540px + 白底 16px 静区、二维码区竖排居中（码在上文字在下）、
+主标 98–100px、天头到主标 86px、深蓝页脚 64px。
+渲染：window 1080×1440、2x；验收 `python3 scripts/check_bottom_gap.py 成品.png`，剩 60–90px 最舒服。
+-->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Regular.ttf');font-weight:400}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Medium.ttf');font-weight:500}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Demibold.ttf');font-weight:600}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Bold.ttf');font-weight:700}
+@font-face{font-family:'MiSans';src:url('file:///Users/Jin/Library/Fonts/MiSans-Heavy.ttf');font-weight:800}
+:root{--brand:#006EBB;--deep:#004E86;--ink:#16202B;--wash:#EFF6FC}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;height:1440px;font-family:'MiSans','Apple Color Emoji',-apple-system,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
+.page{width:1080px;height:1440px;position:relative;overflow:hidden;padding:56px 64px 0;background:#fff}
+.head{display:flex;justify-content:flex-end;align-items:center;gap:16px}
+.head img{height:44px;order:2}
+.badge{background:var(--brand);color:#fff;font-size:22px;font-weight:700;letter-spacing:1.5px;padding:10px 19px;border-radius:6px;order:1}
+h1{font-size:98px;line-height:1.2;font-weight:800;letter-spacing:-1px;margin-top:86px}
+h1 em{font-style:normal;color:var(--brand)}
+.rule{height:3px;background:var(--ink);margin-top:40px}
+.qrzone{margin-top:64px;background:var(--wash);border-radius:22px;padding:50px 40px 46px;display:flex;flex-direction:column;align-items:center;gap:38px}
+.qrbox{background:#fff;border-radius:14px;padding:16px}
+.qrbox img{width:540px;height:540px;display:block;border-radius:6px}
+.qrtext{text-align:center}
+.qrtext .t1{font-size:52px;font-weight:800;line-height:1.42;letter-spacing:-.5px}
+.qrtext .t1 span{color:var(--brand)}
+.foot{position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--deep);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 64px;font-size:20px;letter-spacing:1px}
+</style></head><body>
+<div class="page">
+  <div class="head">
+    <span class="badge">科研 AI 工作台</span>
+    <img src="file:///Users/Jin/.hermes/skills/scilink-pic/assets/logo.png">
+  </div>
+  <h1>扫码领<em>开题报告模板</em><br>开题不再从零写</h1>
+  <div class="rule"></div>
+
+  <div class="qrzone">
+    <div class="qrbox"><img src="file:///Users/Jin/Documents/素材/刀客轻研小助手二维码.jpg"></div>
+    <div class="qrtext">
+      <div class="t1">扫码添加<span>企微客服</span><br>立领模板资料包</div>
+    </div>
+  </div>
+
+  <div class="foot"><span>刀客轻研 · SciLink</span><span>医学前沿 · 科研动态 · 医务生活</span></div>
+</div>
+</body></html>

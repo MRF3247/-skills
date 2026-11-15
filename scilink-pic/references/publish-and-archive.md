@@ -86,7 +86,7 @@ lark-cli docs +update --doc $DOC --command block_insert_after \
 
 ## 四、同步到 GitHub（用户自己的 skill 仓库）
 
-仓库：`https://github.com/MRF3247/-skills`（公开仓库）。两个 skill 一起推：`scilink-pic` 与 `scilink-xhs-writing`，它们指向同一份规范，只推一个会立刻不一致。
+仓库：`https://github.com/MRF3247/-skills`（公开仓库）。两个 skill 一起推：`scilink-pic` 与 `scilink-writing`，它们指向同一份规范，只推一个会立刻不一致。
 
 **本地目录名不要用 `-skills`**：仓库名以连字符开头，`git clone <url> -skills` 会把目标目录当成 flag 解析，卡死或报错。用 `mrf-skills` 这类普通名字。
 
@@ -96,7 +96,7 @@ lark-cli docs +update --doc $DOC --command block_insert_after \
 cd ~/Documents/GitProgram
 git clone --filter=blob:none --no-checkout --depth 1 https://github.com/MRF3247/-skills.git mrf-skills
 cd mrf-skills
-git sparse-checkout set --no-cone '/*.md' 'scilink-xhs-writing/**' \
+git sparse-checkout set --no-cone '/*.md' 'scilink-writing/**' \
   'scilink-pic/**/*.md' 'scilink-pic/**/*.py'
 git checkout main
 ```
@@ -104,7 +104,7 @@ git checkout main
 **推之前逐文件 diff，不要直接 rsync 覆盖**：仓库里的副本可能是另一台机器或另一个工作分支改过的（实测仓库里两个 `references/*.md` 还写着旧目录名 `ref-style-poster`，本地早已改成 `scilink-` 前缀）。覆盖前先 `diff 仓库文件 本地文件`，确认本地确实更新才盖；仓库侧有本地没有的修正时先合再推。
 
 ```bash
-for sk in scilink-xhs-writing scilink-pic; do
+for sk in scilink-writing scilink-pic; do
   rsync -a --exclude 'assets' --exclude '__pycache__' --exclude '.DS_Store' \
     ~/.hermes/skills/$sk/ $sk/
 done
@@ -129,3 +129,5 @@ curl -s "https://api.github.com/repos/MRF3247/-skills/git/trees/main?recursive=1
 - 全局 `git config user.name/email` 为空，commit 必须现场用 `-c` 传入，否则报身份未知；不要改用户全局配置。
 - 仓库约 20MB，单文件都远低于 100MB，**不要为了瘦身去转码参考图**——那会连带改掉 SKILL.md 里的路径。
 - `assets/` 本地与远端字节数通常完全一致，不需要重传；要更新参考图时单独把该文件拷进去再 `git add`。
+- **重命名技能目录时 sparse-checkout 会把改动静默吞掉**：对新路径 `git mv` / `git add` 只打一行 `matched paths that exist outside of your sparse-checkout definition`（退出码仍为 0，`git status` 里什么都没有）。固定四步：① `git sparse-checkout set --no-cone '/*.md' 'scilink-writing/**' '<新目录>/**' 'scilink-topic/**'`；② `git add -A <新目录>`；③ 旧目录用 `git rm -r --cached --sparse <旧目录>` —— **必须 `--cached`**，因为 assets 从未 checkout，普通 `git rm` 会直接报错；④ commit。内容一样的部分 git 会自动识别成 rename，历史不丢，不必手工 `git mv`。
+- **验证远端要数残留，不要看 push 输出**：push 成功后拉 `api.github.com/repos/<u>/<r>/git/trees/main?recursive=1`，`<旧目录>` 前缀的条目必须为 0；刚 push 完那几秒响应可能还是旧树，重查一次再下结论。二进制的 assets 最容易漏（不在工作区就会在第一次删除时被跳过）。

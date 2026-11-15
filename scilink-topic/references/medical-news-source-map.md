@@ -13,6 +13,8 @@
 
 ## 2. 源清单（按可用性分三档）
 
+> 2026-10 更新：已补入 6 个中文官方源（见下「中文源」），至此**英文线 + 中文线都不再依赖 MedHOT / 每日医讯**。
+
 ### A 档 · 直连即得（实测 HTTP 200，21/24）
 
 **期刊正文（EuropePMC，按 ISSN，可扩）**：NEJM / JAMA 系列（4）/ Lancet 系列（5）/ Nature 系列（4）/ Cell / Science / BMJ / Annals / Circulation / JACC / EHJ / Diabetes Care / Blood / JCO / Brain / Gut / Gastroenterology / J Hepatol / CID / ICM / Critical Care / Anesthesiology / Radiology / Eur Urol / Pediatrics / PLOS Med / STTT / Chin Med J
@@ -24,6 +26,8 @@ https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ISSN:<issn>+AND+SR
 `HAS_ABSTRACT:Y` 很重要——不写会混进大量读者来信、更正、讣告。
 
 **RSS（16 个）**：Nature / Nature Medicine / Nature Biotech / Nature Rev Cancer / NEJM / NEJM Evidence / Lancet / Lancet Oncology / Lancet ID / JAMA / Cell / Science / WHO / CDC / bioRxiv / medRxiv
+
+> ⚠️ 2026-10-26 起 **bioRxiv / medRxiv 默认不抓**（用户决定：预印本无同行评议、太前沿，不适合医生向公开内容）。源配置移到 `PREPRINT_FEEDS`，只有 `--with-preprint` 才启用。
 
 ### B 档 · 能抓但偶发失败（重试即可）
 - `medRxiv` RSS：偶发 408 超时，重试 1-2 次
@@ -37,8 +41,24 @@ https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ISSN:<issn>+AND+SR
 | FDA 新闻稿 | 原 RSS 路径 404 | 改抓 `https://www.fda.gov/news-events/fda-newsroom`（camofox），或 openFDA API |
 | Guardian Health | 国内直连超时 000 | 需要时走代理；价值低，可直接不抓 |
 
-### 中文源（每日医讯那条管道的补充）
-科学网（news.sciencenet.cn）、梅斯医学（medsci.cn）、丁香园、B站博主——都是**页面抓取**，没有可用 RSS。medsci 文章页 `curl` 可直读标题+日期（实测 521KB 完整 HTML）。
+### 中文源（已接入脚本，`--only cn`）
+
+2026-10 实测可用并已固化的 6 个中文官方源：
+
+| 源 | URL | 接入方式 | 发帖节奏 |
+|---|---|---|---|
+| NMPA 药品公告 | `nmpa.gov.cn/yaopin/ypggtg/index.html` | camofox（curl 412） | 几天一条，含说明书修订、非处方药转换、口岸公告 |
+| NMPA 药品动态 | `nmpa.gov.cn/yaopin/ypjgdt/index.html` | camofox（curl 412） | **1-3 天一条，含新药批准上市（最高价值）** |
+| 卫健委政策法规 | `nhc.gov.cn/wjw/zcfg/list.shtml` | camofox | 周级，政策原文+解读混排 |
+| 卫健委工作通知 | `nhc.gov.cn/wjw/gztz/list.shtml` | camofox | 半月级，规培/绩效监测/专项活动 |
+| 卫健委征求意见 | `nhc.gov.cn/wjw/zqyj/list.shtml` | camofox | 月级，含生物医学新技术转化审批规范类 |
+| 国自然通知公告 | `nsfc.gov.cn/p1/2828/2831/tzgg11.html` | **curl 直连 200** | 季度级，集中在中报期 |
+
+已排除的候选：`nhc.gov.cn/wjw/zcjd/list.shtml`（政策解读）与政策法规列表内容 100% 重叠，删；卫健委首页（新华社时政通稿占满，无选题价值），删；`nsfc.gov.cn/publish/portal0/tab442/` 旧路径已 404。
+
+其他中文媒体（科学网、梅斯、丁香园、B站）仍是**页面抓取**，未接入脚本——价值低于官方源，需要时单次抓。
+
+> 模板提示：两类列表结构都要兼容——①`<li><a title>¥</a><span>日期</span></li>`（NMPA/卫健委）；②`<a href><li>…<div class="date">日期</div></li></a>`（国自然）。脚本 `parse_cn()` 按「日期位置往前找最近的 `<a>`」统一处理，不用写两套。
 
 ## 3. 覆盖验证（实测 2026-10-25，MedHOT 近 3 天 15 个 story 抽 11 条）
 
@@ -48,7 +68,7 @@ https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=ISSN:<issn>+AND+SR
 | relatlimab 5 年、mKRAS 疫苗、CAR-T 队列、visugromab | ✅ Nature Medicine RSS |
 | Anbenitamab（NEJM） | ✅ NEJM RSS |
 | COMPANION-002（JCO）、PBC 指南（Gastroenterology） | ✅ EuropePMC 按 ISSN 补回 |
-| Bundibugyo 预印本（bioRxiv） | ✅ EuropePMC 标题搜 / bioRxiv RSS |
+| Bundibugyo 预印本（bioRxiv） | ⚠️ 可抓，但 2026-10-26 起主动不收预印本；如必须做前沿题材再加 `--with-preprint` |
 | APRIL/BAFF（Medscape）、登革热（MedPage） | ⚠️ 新闻类只走 camofox；同一事件基本都有期刊原文可用 EuropePMC 抓到 |
 
 **结论：期刊类 100% 可复现；新闻类靠 RSS 约 8 成，剩余靠 camofox。**
@@ -103,7 +123,22 @@ python3 <skill>/scripts/fetch_all_sources.py --days 7 --dept radio --out /tmp/ca
 
 **加刊只要在 `JOURNALS` 字典加一行 `显示名: ISSN`**，不用改其他代码。
 
-## 8. 「抓 0 条」不等于空源（踩过的错判）
+## 8. 临床学习/参考站点 vs 资讯源（两类，不能混）
+
+用户问「哪些网站对临床/医学生有价值、你收了没」时，先分类再回答，**不要把所有网站都算成“该抓”**：
+
+| 类型 | 例子 | 是否入抓取 |
+|---|---|---|
+| **资讯型**（每天/每周出新内容，能产选题） | NMPA、卫健委、国自然、NEJM/Lancet RSS、MedPage、STAT、Retraction Watch、医脉通·指南、中华医学期刊网 | **该抓**（未收的要补） |
+| **工具型**（随时查，不产出“新消息”） | UpToDate、BMJ Best Practice、DynaMed、MDCalc、AMBIS、Osmosis、Radiopaedia、LITFL、Pathology Outlines、PubMed/PMC 检索页、ClinicalTrials.gov | **不抓**，但学习/查证时优先 |
+
+已核过、**该收但尚未收录**的 6 个（按价值排序）：医脉通·指南（`guide.medlive.cn`，评级医生的刚需、页面抓取）、中华医学期刊网（`yiigle.com`，可能有付费墙）、CDE 药审中心（`cde.org.cn`，返回 202 需 JS，能提前 3-12 个月看到“这药要来了”）、FDA 药品审批（`fda.gov`，camofox 可绕）、EMA（`ema.europa.eu`，RSS 可用、常早于 FDA）、中华医学会会议/征文。
+
+完整 46 条清单（含每个站一句话用途、✅已收录/🟡抓不到/⬜未收录）已存入选题库 Base 内的 docx 块「**常用信源（用于人工筛选）**」(`docx_token` `Tqeid2vHlo4jmXxhKb2cmpXZntk`)；再要更新它时用 `base +base-block-list` 拿 token，再 `docs +update --command overwrite --doc-format markdown`。
+
+链接交付前必须批量探活（并发 10 路、单条 20s）：`404` 换路径、`000` 换站——实测 `calgaryguide.ucalgary.ca` 已迁到 `calgaryguide.ca`，`ECG Wave-Maven` 域名彻底无响应要换 `ECGpedia`。`401/403` 是 WAF 拦脚本，浏览器正常，照发并注明。
+
+## 9. 「抓 0 条」不等于空源（踩过的错判）
 
 2026-10-25 实测：`Annals of Emergency Medicine`（ISSN 0196-0644）在 `--days 10` 窗口下拉回 **0 条**，我一度判定它是空源，要求下一轮换刊。复查发现**它收了 7211 篇、最新一条是 2026-10-14**——只是发文節奏慢，刚好卡在 10-15 的窗口边界外。
 
